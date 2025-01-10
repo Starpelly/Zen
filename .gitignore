@@ -1,0 +1,12 @@
+.vscode/
+
+# Beef
+build
+BeefSpace_User.toml
+dist
+recovery
+*.zip
+
+# Test
+test/tcc
+test/output

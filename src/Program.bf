@@ -4,6 +4,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 
+using Zen.Compiler;
 using Zen.Lexer;
 using Zen.Parser;
 using Zen.Transpiler;
@@ -37,7 +38,7 @@ class Program
 	private static bool g_hadErrors = false;
 
 	private static List<ParsedFile> g_parsedFiles = new .() ~ DeleteContainerAndItems!(_);
-	// private static List<Stmt> g_statements = new .();
+	private static List<Stmt> g_statements = new .() ~ delete _;
 
 	public static int Main(String[] args)
 	{
@@ -53,17 +54,11 @@ class Program
 		let originalConsoleColor = Console.ForegroundColor;
 		defer { Console.ForegroundColor = originalConsoleColor; }
 
-		Console.WriteLine("Transpiling...");
+		Console.WriteLine("Compiling...");
 
-		let transpilerWatch = scope Stopwatch();
-		transpilerWatch.Start();
+		let watch = scope Stopwatch();
 
-		let std = scope StandardLib();
-		let zenHeader = std.WriteZenHeader(.. scope .());
-		let programFile = std.WriteProgramFile(.. scope .());
-
-		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Zen.h"), zenHeader);
-		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.c"), programFile);
+		watch.Start(); // Parsing
 
 		for (let file in Directory.EnumerateFiles(inputSrcDir))
 		{
@@ -71,22 +66,57 @@ class Program
 			parseFile(fileName, file.GetFilePath(.. scope .()));
 		}
 
-		for (let file in g_parsedFiles)
-		{
-			transpileAST(file, outputSrcDirProgram);
-		}
+		watch.Stop(); // Parsing
+		let parseTime = watch.Elapsed.TotalSeconds;
+		watch.Reset();
 
-		transpilerWatch.Stop();
+		watch.Start(); // Compiling
 
 		if (!g_hadErrors)
 		{
-			Console.WriteLine(scope $"Zen transpilation time: {transpilerWatch.Elapsed.TotalSeconds.ToString(.. scope .(), "0.00", CultureInfo.InvariantCulture)}s");
-			// Console.WriteLine(scope $"{filesWritten} {(filesWritten > 1) ? "files" : "file" } generated");
+			let resolver = scope Resolver();
+			if (resolver.Resolve(g_statements) case .Ok(let resolvedEnv))
+			{
+				let std = scope StandardLib();
+				let zenHeader = std.WriteZenHeader(.. scope .());
+				let programFile = std.WriteProgramFile(.. scope .());
+
+				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Zen.h"), zenHeader);
+				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.c"), programFile);
+
+				for (let file in g_parsedFiles)
+				{
+					transpileEnvironment(file, resolvedEnv, outputSrcDirProgram);
+				}
+			}
+			else
+			{
+				Console.ForegroundColor = .Red;
+				for (let error in resolver.Errors)
+				{
+					Console.WriteLine(scope $"RESOLVING ERROR: {error.Message} at line {error.Token.Line}:{error.Token.Col}");
+
+					++g_errorCount;
+				}
+
+				g_hadErrors = true;
+			}
+		}
+
+		watch.Stop(); // Compiling
+		let compileTime = watch.Elapsed.TotalSeconds;
+
+		if (!g_hadErrors)
+		{
+			Console.WriteLine(scope $"{g_filesWritten} {(g_filesWritten > 1) ? "files" : "file" } written");
+
+			Console.WriteLine(scope $"Zen parsing time:     {parseTime.ToString(.. scope .(),   "0.000000", CultureInfo.InvariantCulture)}s");
+			Console.WriteLine(scope $"Zen compilation time: {compileTime.ToString(.. scope .(), "0.000000", CultureInfo.InvariantCulture)}s");
 		}
 		else
 		{
 			Console.WriteLine(scope $"Errors: {g_errorCount}");
-			Console.WriteLine("Transpile failed.");
+			Console.WriteLine("Compile failed.");
 		}
 
 		return 0;
@@ -103,7 +133,7 @@ class Program
 			let parser = scope Parser(tokens, null);
 			if (parser.Parse() case .Ok(let statements))
 			{
-				// g_statements.AddRange(statements);
+				g_statements.AddRange(statements);
 				g_parsedFiles.Add(new .(new .(fileName), text, tokens, statements));
 
 				g_filesWritten++;
@@ -123,14 +153,14 @@ class Program
 		}
 	}
 
-	private static void transpileAST(ParsedFile file, String outputSrcDir)
+	private static void transpileEnvironment(ParsedFile file, ZenEnvironment env, String outputSrcDir)
 	{
 		let fileNameWOE = Path.GetFileNameWithoutExtension(file.Name, .. scope .());
 
 		let outputFileH = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.h");
 		let outputFileC = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.c");
 
-		let compiler = scope Transpiler(file.Statements);
+		let compiler = scope Transpiler(file.Statements, env);
 		let output = compiler.Compile(fileNameWOE);
 
 		File.WriteAllText(outputFileH, output.0);

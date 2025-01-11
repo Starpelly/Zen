@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 
+using Zen.Compiler;
 using Zen.Parser;
 
 namespace Zen.Transpiler;
@@ -11,10 +12,12 @@ public class Transpiler
 	private CodeBuilder m_outputC = new .() ~ delete _;
 
 	public readonly List<Stmt> Statements { get; }
+	public readonly ZenEnvironment Enviornment { get; }
 
-	public this(List<Stmt> statements)
+	public this(List<Stmt> statements, ZenEnvironment env)
 	{
 		this.Statements = statements;
+		this.Enviornment = env;
 	}
 
 	/// 1. .h file, 2. .c file
@@ -33,8 +36,23 @@ public class Transpiler
 				if (statement.GetType() == typeof(Stmt.Function))
 				{
 					let fun = ((Stmt.Function)statement);
+					let defNamespace = scope String();
 
-					m_outputH.Append(scope $"{fun.Type.Lexeme} {fun.Name.Lexeme}");
+					if (Enviornment.Get(fun.Name) case .Ok(let val) && fun.Kind != .Main)
+					{
+						let ns = (val.Get<ZenFunction>()).Declaration.Namespace;
+						writeNamespace(defNamespace, ns);
+					}
+
+					let funcName = scope String();
+					if (fun.Namespace != null && fun.Kind != .Main)
+					{
+						let ns = writeNamespace(.. scope .(), fun.Namespace);
+						funcName.Append(ns);
+					}
+					funcName.Append(fun.Name.Lexeme);
+
+					m_outputH.Append(scope $"{fun.Type.Lexeme} {funcName}");
 					m_outputH.Append("(");
 					for (let param in fun.Parameters)
 					{
@@ -74,6 +92,15 @@ public class Transpiler
 	}
 
 	[Inline]
+	private static void writeNamespace(String outStr, Stmt.Namespace ns)
+	{
+		if (ns == null) return;
+
+		writeNamespace(outStr, ns.Parent);
+		outStr.Append(scope $"{ns.Name.Lexeme}_");
+	}
+
+	[Inline]
 	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
 	{
 		// outLexeme.AppendTabs();
@@ -89,17 +116,25 @@ public class Transpiler
 					parameters.Append(", ");
 			}
 
-			m_outputC.AppendLine(scope $"{fun.Type.Lexeme} {fun.Name.Lexeme}({parameters})");
-			m_outputC.AppendLine("{");
-			m_outputC.IncreaseTab();
+			let funcName = scope String();
+			if (fun.Namespace != null && fun.Kind != .Main)
 			{
-				for (let bodyStatement in fun.Body)
+				let ns = writeNamespace(.. scope .(), fun.Namespace);
+				funcName.Append(ns);
+			}
+			funcName.Append(fun.Name.Lexeme);
+
+			outLexeme.AppendLine(scope $"{fun.Type.Lexeme} {funcName}({parameters})");
+			outLexeme.AppendLine("{");
+			outLexeme.IncreaseTab();
+			{
+				for (let bodyStatement in fun.Body.Statements)
 				{
-					stmtToString(ref m_outputC, bodyStatement);
+					stmtToString(ref outLexeme, bodyStatement);
 				}
 			}
-			m_outputC.DecreaseTab();
-			m_outputC.AppendLine("}");
+			outLexeme.DecreaseTab();
+			outLexeme.AppendLine("}");
 
 			// outLexeme.AppendEmptyLine();
 		}
@@ -132,7 +167,7 @@ public class Transpiler
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
-				stmtToString(ref m_outputC, @if.ThenBranch);
+				stmtToString(ref outLexeme, @if.ThenBranch);
 			}
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
@@ -146,7 +181,7 @@ public class Transpiler
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
-				stmtToString(ref m_outputC, @while.Body);
+				stmtToString(ref outLexeme, @while.Body);
 			}
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
@@ -163,20 +198,22 @@ public class Transpiler
 
 		if (let call = expr as Expr.Call)
 		{
-			let name = expressionToString(.. scope .(), call.Callee);
+			var callNamespace = scope $"";
+
+			let callee = Enviornment.Get(((Expr.Variable)call.Callee).Name);
+			if (callee case .Ok(let val))
+			{
+				let ns = (val.Get<ZenFunction>()).Declaration.Namespace;
+				writeNamespace(callNamespace, ns);
+			}
+
+			let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
 
 			let arguments = scope String();
 
 			for (let argument in call.Arguments)
 			{
 				arguments.Append(expressionToString(.. scope .(), argument));
-
-				/*
-				let lexeme = expressionToString(..scope .(), argument);
-
-				arguments.Append(scope $"{lexeme}");
-
-				*/
 
 				if (argument != call.Arguments.Back)
 					arguments.Append(", ");

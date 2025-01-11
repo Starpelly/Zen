@@ -4,9 +4,10 @@ fun int main()
 {
 	if (true)
 	{
-		hello();
-		tester();
+		Hello();
 	}
+	
+	PrintMath();
 
 	return 0;
 }

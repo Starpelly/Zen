@@ -8,7 +8,7 @@ public enum TokenType
 	Greater, Less, Minus, Plus,
 
 	// Two-characters
-	BangEqual, EqualEqual, GreaterEqual, LessEqual,
+	BangEqual, EqualEqual, GreaterEqual, LessEqual, SlashEqual,
 
 	// Literals
 	Identifier, String, Integer,

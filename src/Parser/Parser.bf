@@ -19,13 +19,13 @@ public class ParseError
 
 public class Parser
 {
-	function T Func<T>();
-
 	private readonly List<Stmt> m_statements = new .();
 	private int m_current = 0;
 
 	private readonly List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
+
+	private Stmt.Namespace m_currentNamespace = null;
 
 	public readonly List<Token> Tokens { get; }
 	public readonly List<Stmt> PreviousStatements { get; }
@@ -69,6 +69,8 @@ public class Parser
 
 	private Stmt declaration()
 	{
+		if (match(.Namespace))
+			return NamespaceStatement();
 		if (match(.Fun))
 			return FunctionStatement(.Function);
 		if (match(.Struct))
@@ -79,8 +81,6 @@ public class Parser
 			return IfStatement();
 		if (match(.While))
 			return WhileStatement();
-		if (match(.Namespace))
-			return NamespaceStatement();
 		// if (match(.Print))
 		// 	return PrintStatement();
 
@@ -119,6 +119,17 @@ public class Parser
 		return statements;
 	}
 
+	private Stmt.Namespace NamespaceStatement()
+	{
+		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
+
+		consume(.Semicolon, "Expected ';' after namespace identifier.");
+
+		let parentNamespace = m_currentNamespace;
+		m_currentNamespace = new Stmt.Namespace(identity, parentNamespace);
+		return m_currentNamespace;
+	}
+
 	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
 	{
 		var kind;
@@ -150,7 +161,7 @@ public class Parser
 
 		let body = Block();
 
-		return new .(kind, name, type, parameters, body);
+		return new .(m_currentNamespace, kind, name, type, parameters, new .(body));
 	}
 
 	private Stmt.Struct StructStatement()
@@ -211,14 +222,6 @@ public class Parser
 		let body = statement();
 
 		return new Stmt.While(condition, body);
-	}
-
-	private Stmt.Namespace NamespaceStatement()
-	{
-		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
-
-		consume(.Semicolon, "Expected ';' after namespace identifier.");
-		return new Stmt.Namespace(identity);
 	}
 
 	// ----------------------------------------------------------------

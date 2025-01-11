@@ -18,6 +18,18 @@ public abstract class Stmt
 		}
 	}
 
+	public class Namespace : Stmt
+	{
+		public Token Name { get; }
+		public Self Parent { get; }
+
+		public this(Token name, Self parent)
+		{
+			this.Name = name;
+			this.Parent = parent;
+		}
+	}
+
 	public class Block : Stmt
 	{
 		public List<Stmt> Statements { get; } ~ DeleteContainerAndItems!(_);
@@ -42,6 +54,7 @@ public abstract class Stmt
 	{
 		public enum FunctionKind
 		{
+			None,
 			Main,
 			Function,
 			Event
@@ -51,10 +64,13 @@ public abstract class Stmt
 		public Token Name { get; }
 		public Token Type { get; }
 		public List<Parameter> Parameters { get; } ~ delete _;
-		public List<Stmt> Body { get; } ~ DeleteContainerAndItems!(_);
+		public Block Body { get; } ~ delete _;
 
-		public this(FunctionKind kind, Token name, Token type, List<Parameter> parameters, List<Stmt> body)
+		public Namespace Namespace { get; }
+
+		public this(Namespace @namespace, FunctionKind kind, Token name, Token type, List<Parameter> parameters, Block body)
 		{
+			this.Namespace = @namespace;
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
@@ -118,16 +134,6 @@ public abstract class Stmt
 		{
 			this.Condition = condition;
 			this.Body = body;
-		}
-	}
-
-	public class Namespace : Stmt
-	{
-		public Token Name { get; }
-
-		public this(Token name)
-		{
-			this.Name = name;
 		}
 	}
 }

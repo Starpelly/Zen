@@ -104,6 +104,10 @@ public class Tokenizer
 					advance();
 				}
 			}
+			else if (match('=', true))
+			{
+				addToken(.SlashEqual);
+			}
 			else
 			{
 				addToken(.Slash);
@@ -162,9 +166,9 @@ public class Tokenizer
 			advance();
 		}
 
-		// Un-terminated string.
 		if (isAtEnd())
 		{
+			// Un-terminated string.
 			// Lexer error here.
 			return;
 		}
@@ -204,17 +208,21 @@ public class Tokenizer
 
 	private void scanIdentifier()
 	{
-		while (isAlphaNumeric(peek())) advance();
-
+		while (isAlphaNumeric(peek()))
+		{
+			advance();
+		}
 		// Check if the identifer is a reserved keyword.
 		let text = substring(m_start, m_current);
 
-		var resolvedType = TokenType.Identifier;
 		if (KeywordsMap.TryGetValue(scope .(text), let type))
 		{
-			resolvedType = type;
+			addToken(type);
 		}
-		addToken(resolvedType);
+		else
+		{
+			addToken(.Identifier, Variant.Create<StringView>(text));
+		}
 	}
 
 	private bool match(char8 expected, bool advance)
@@ -255,7 +263,9 @@ public class Tokenizer
 
 	private bool isAlphaNumeric(char8 c)
 	{
-		return c.IsLetterOrDigit;
+		return (c >= 'a' && c <= 'z') ||
+			(c >= 'A' && c <= 'Z') ||
+			c == '_';
 	}
 
 	private bool isDigit(char8 c)

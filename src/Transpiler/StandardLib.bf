@@ -19,6 +19,7 @@ public class StandardLib
 
 		builder.AppendLine("#define true  (1 == 1)");
 		builder.AppendLine("#define false (!true)");
+		builder.AppendLine("#define bool _Bool");
 	}
 
 	public void WriteProgramFile(String outString)

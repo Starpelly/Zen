@@ -96,8 +96,11 @@ public class Transpiler
 	{
 		if (ns == null) return;
 
-		writeNamespace(outStr, ns.Parent);
 		outStr.Append(scope $"{ns.Name.Lexeme}_");
+		for (let child in ns.Children)
+		{
+			outStr.Append(scope $"{child.Lexeme}_");
+		}
 	}
 
 	[Inline]
@@ -200,7 +203,7 @@ public class Transpiler
 		{
 			var callNamespace = scope $"";
 
-			let callee = Enviornment.Get(((Expr.Variable)call.Callee).Name);
+			let callee = Enviornment.Get(call.Callee.Name);
 			if (callee case .Ok(let val))
 			{
 				let ns = (val.Get<ZenFunction>()).Declaration.Namespace;

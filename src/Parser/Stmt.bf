@@ -21,12 +21,47 @@ public abstract class Stmt
 	public class Namespace : Stmt
 	{
 		public Token Name { get; }
+		public List<Token> Children { get; } ~ delete _;
 		public Self Parent { get; }
 
-		public this(Token name, Self parent)
+		public this(Token name, List<Token> children, Self parent)
 		{
 			this.Name = name;
+			this.Children = children;
 			this.Parent = parent;
+		}
+
+		public static bool operator == (Self a, Self b)
+		{
+			if (a.Name.Lexeme != b.Name.Lexeme) return false;
+			if (a.Children.Count != b.Children.Count) return false;
+
+			for (let i < a.Children.Count)
+			{
+				if (a.Children[i].Lexeme != b.Children[i].Lexeme)
+					return false;
+			}
+
+			return true;
+		}
+
+		public static bool operator != (Self a, Self b)
+		{
+			return !(a == b);
+		}
+
+		public static bool CompareChildrenLexeme(List<Token> a, List<Token> b)
+		{
+			if (a.IsEmpty && b.IsEmpty) return true;
+			if (a.Count != b.Count) return false;
+
+			for (let i < a.Count)
+			{
+				if (a[i].Lexeme != b[i].Lexeme)
+					return false;
+			}
+
+			return true;
 		}
 	}
 

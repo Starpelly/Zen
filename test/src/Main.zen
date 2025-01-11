@@ -1,13 +1,18 @@
 namespace Program;
 
-fun int main()
+fun void main()
 {
-	if (true)
+	if (check())
 	{
-		Hello();
+		PrintHello();
 	}
-	
+
 	PrintMath();
 
 	return 0;
+}
+
+fun bool check()
+{
+	return true;
 }

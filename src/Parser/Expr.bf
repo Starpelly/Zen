@@ -23,15 +23,17 @@ public abstract class Expr
 
 	public class Call : Expr
 	{
-		public Expr Callee { get; } ~ delete _;
+		public Expr.Variable Callee { get; } ~ delete _;
 		public Token Paren { get; }
 		public List<Expr> Arguments { get; } ~ DeleteContainerAndItems!(_);
+		public List<Token> Namespaces { get; } ~ delete _;
 
-		public this(Expr callee, Token paren, List<Expr> arguments)
+		public this(Expr.Variable callee, Token paren, List<Expr> arguments, List<Token> namespaces)
 		{
 			this.Callee = callee;
 			this.Paren = paren;
 			this.Arguments = arguments;
+			this.Namespaces = namespaces;
 		}
 	}
 

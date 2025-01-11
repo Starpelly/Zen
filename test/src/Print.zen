@@ -1,0 +1,17 @@
+namespace Program;
+
+fun void PrintHello()
+{
+	// Comments aren't included in the output.
+
+	printf("hello from zen!\n");
+}
+
+fun void PrintMath()
+{
+	printf("Add: %i\n", Program::Math::Add(2, 2));
+	printf("Sub: %i\n", Program::Math::Sub(2, 2));
+	printf("Mul: %i\n", Program::Math::Mul(2, 2));
+	printf("Div: %i\n", Program::Math::Div(2, 2));
+	printf("Mod: %i\n", Program::Math::Mod(2, 2));
+}

@@ -5,7 +5,7 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
-public class ParseError
+public class ParseError : ICompilerError
 {
 	public Token Token { get; }
 	public String Message { get; } ~ delete _;
@@ -19,7 +19,7 @@ public class ParseError
 
 public class Parser
 {
-	private readonly List<Stmt> m_statements = new .();
+	private List<Stmt> m_statements;
 	private int m_current = 0;
 
 	private readonly List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
@@ -28,17 +28,17 @@ public class Parser
 	private Stmt.Namespace m_currentNamespace = null;
 
 	public readonly List<Token> Tokens { get; }
-	public readonly List<Stmt> PreviousStatements { get; }
 	public readonly List<ParseError> Errors => m_errors;
 
-	public this(List<Token> tokens, List<Stmt> previousStatements)
+	public this(List<Token> tokens)
 	{
 		this.Tokens = tokens;
-		this.PreviousStatements = previousStatements;
 	}
 
 	public Result<List<Stmt>> Parse()
 	{
+		m_statements = new .();
+
 		while (!isAtEnd() && !m_hadErrors)
 		{
 			m_statements.Add(declaration());
@@ -62,7 +62,10 @@ public class Parser
 		}
 
 		if (m_hadErrors)
+		{
+			DeleteContainerAndItems!(m_statements);
 			return .Err;
+		}
 
 		return .Ok(m_statements);
 	}
@@ -123,10 +126,22 @@ public class Parser
 	{
 		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
 
+		var parentNamespace = m_currentNamespace;
+
+		let children = new List<Token>();
+		if (!check(.Semicolon))
+		{
+			advance();
+			repeat
+			{
+				let child = consume(.Identifier, "Expected identifier.");
+			   	children.Add(child);
+			} while (match(.DoubleColon));
+		}
+
 		consume(.Semicolon, "Expected ';' after namespace identifier.");
 
-		let parentNamespace = m_currentNamespace;
-		m_currentNamespace = new Stmt.Namespace(identity, parentNamespace);
+		m_currentNamespace = new Stmt.Namespace(identity, children, parentNamespace);
 		return m_currentNamespace;
 	}
 
@@ -312,7 +327,7 @@ public class Parser
 	{
 		return parseLeftAssociativeBinaryOparation(
 			=> Unary,
-			.Slash, .Star);
+			.Slash, .Star, .Modulus);
 	}
 
 	private Expr Unary()
@@ -331,11 +346,23 @@ public class Parser
 	{
 		var expr = Primary();
 
+		List<Token> namespaces = null;
 		while (true)
 		{
 			if (match(.LeftParentheses))
 			{
-				expr = FinishCall(expr);
+				if (namespaces == null)
+					namespaces = new .();
+				expr = FinishCall((Expr.Variable)expr, ref namespaces);
+			}
+			else if (match(.DoubleColon))
+			{
+				if (namespaces == null)
+					namespaces = new .();
+				namespaces.Add(((Expr.Variable)expr).Name);
+
+				delete expr;
+				expr = Primary();
 			}
 			else if (match(.Dot))
 			{
@@ -351,7 +378,7 @@ public class Parser
 		return expr;
 	}
 
-	private Expr FinishCall(Expr callee)
+	private Expr FinishCall(Expr.Variable callee, ref List<Token> namespaces)
 	{
 		let arguments = new List<Expr>();
 		if (!check(.RightParenthesis))
@@ -364,7 +391,7 @@ public class Parser
 
 		let paren = consume(.RightParenthesis, "Expected ')' after arguments.");
 
-		return new Expr.Call(callee, paren, arguments);
+		return new Expr.Call(callee, paren, arguments, namespaces);
 	}
 
 	private Expr Primary()

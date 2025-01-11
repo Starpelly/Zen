@@ -36,12 +36,15 @@ public class Tokenizer
 	private int m_current = 0;
 	private int m_line = 1;
 	private int m_lineCol = 0;
+	private int m_lineColReal = 0;
+	private readonly int m_fileIndex = 0;
 
 	private readonly String Source { get; }
 
-	public this(String source)
+	public this(String source, int file)
 	{
 		Source = source;
+		m_fileIndex = file;
 	}
 
 	public List<Token> ScanTokens()
@@ -53,7 +56,7 @@ public class Tokenizer
 			scanToken();
 		}
 
-		m_tokens.Add(.(.EOF, Variant.Create<int>(0), "", m_line, 0));
+		m_tokens.Add(.(.EOF, Variant.Create<int>(0), "", m_fileIndex, m_line, 0, 0));
 		return m_tokens;
 	}
 
@@ -74,6 +77,7 @@ public class Tokenizer
 		case '+' : addToken(.Plus); break;
 		case ';' : addToken(.Semicolon); break;
 		case '*' : addToken(.Star); break;
+		case '%' : addToken(.Modulus); break;
 		case '!' : addToken(match('=', true) ? .BangEqual : .Bang); break;
 		case '=' : addToken(match('=', true) ? .EqualEqual : .Equal); break;
 		case '<' : addToken(match('=', true) ? .LessEqual : .Less); break;
@@ -95,6 +99,7 @@ public class Tokenizer
 					{
 						m_line++;
 						m_lineCol = 0;
+						m_lineColReal = 0;
 					}
 					if (match('*', true) && peek() == '/')
 					{
@@ -113,6 +118,16 @@ public class Tokenizer
 				addToken(.Slash);
 			}
 			break;
+		case ':':
+			if (match(':', true))
+			{
+				addToken(.DoubleColon);
+			}
+			else
+			{
+				addToken(.Colon);
+			}
+			break;
 
 		case ' ':
 		case '\r':
@@ -126,6 +141,7 @@ public class Tokenizer
 		case '\n':
 			m_line++;
 			m_lineCol = 0;
+			m_lineColReal = 0;
 			break;
 
 		case '"': scanString(); break;
@@ -155,7 +171,7 @@ public class Tokenizer
 	private void addToken(TokenType type, Variant literal)
 	{
 		let text = substring(m_start, m_current);
-		m_tokens.Add(.(type, literal, text, m_line, m_lineCol));
+		m_tokens.Add(.(type, literal, text, m_fileIndex, m_line, m_lineCol - (m_current - m_start), m_lineColReal - (m_current - m_start)));
 	}
 
 	private void scanString()
@@ -253,6 +269,7 @@ public class Tokenizer
 	{
 		m_current++;
 		m_lineCol++;
+		m_lineColReal++;
 		// return Source[m_current - 1];
 	}
 

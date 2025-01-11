@@ -6,7 +6,7 @@ using Zen.Parser;
 
 namespace Zen.Compiler;
 
-public class ResolvingError
+public class ResolvingError : ICompilerError
 {
 	public Token Token { get; }
 	public String Message { get; } ~ delete _;
@@ -104,6 +104,15 @@ public class Resolver
 
 	private void visitFunctionStmt(Stmt.Function stmt)
 	{
+		// Function already exists
+		// Tbh, this should be for all identifiers in a scope
+		// But we'll do this simply for now.
+		if (m_enviornment.Get(stmt.Name) case .Ok(let val))
+		{
+			error(stmt.Name, "Identifier already defined");
+			return;
+		}
+
 		let fun = new ZenFunction(stmt);
 		m_enviornment.Define(stmt.Name.Lexeme, Variant.Create(fun));
 
@@ -141,15 +150,59 @@ public class Resolver
 
 	private void visitCallExpr(Expr.Call expr)
 	{
-		if (m_enviornment.Get(((Expr.Variable)expr.Callee).Name) case .Ok(let val))
+		void existCheck()
 		{
-			let @namespace = val.Get<ZenFunction>().Declaration.Namespace;
-			if (m_currentNamespace != null && @namespace != null &&
-				 m_currentNamespace.Name.Lexeme != @namespace.Name.Lexeme)
+			if (m_enviornment.Get(expr.Callee.Name) case .Ok(let val))
 			{
-				error(expr.Paren, "Function not available in current namespace.");
+				let zenFunc = val.Get<ZenFunction>();
+				let zenFuncNamespace = zenFunc.Declaration.Namespace;
+
+				let zenFuncNamespaces = scope List<Token>();
+				zenFuncNamespaces.Add(zenFuncNamespace.Name);
+				zenFuncNamespaces.AddRange(zenFuncNamespace.Children);
+
+				mixin nsError()
+				{
+					error(expr.Namespaces[0], "Function not available in current namespace.");
+					return;
+				}
+
+				// Step 1.
+				// Compare the function we're calling's namespaces and the callee's namespaces.
+				if (!Stmt.Namespace.CompareChildrenLexeme(zenFuncNamespaces, expr.Namespaces))
+				{
+					nsError!();
+				}
+				else
+				{
+					return;
+				}
+
+				/*
+				// Step 2.
+				// Check if we're currently in a namespace and the target function is also in a namespace.
+				if (m_currentNamespace != null && zenFuncNamespace != null)
+				{
+					let compareChildren = Stmt.Namespace.CompareChildrenLexeme(zenFuncNamespace.Children, expr.Namespaces);
+
+					// Step 3.
+					// Check if the top level namespace is the same for the curent namespace and the target function.
+					if (m_currentNamespace.Name.Lexeme == zenFuncNamespace.Name.Lexeme)
+					{
+						if (!compareChildren)
+						{
+							nsError!();
+						}
+					}
+					else
+					{
+						nsError!();
+					}
+				}
+				*/
 			}
 		}
+		existCheck();
 
 		resolve(expr.Callee);
 

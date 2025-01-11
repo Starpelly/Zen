@@ -5,10 +5,11 @@ public enum TokenType
 	// Single-characters
 	LeftParentheses, RightParenthesis, LeftBrace, RightBrace,
 	Dot, Comma, Colon, Semicolon, Slash, Star, Bang, Equal,
-	Greater, Less, Minus, Plus,
+	Greater, Less, Minus, Plus, Modulus,
 
 	// Two-characters
 	BangEqual, EqualEqual, GreaterEqual, LessEqual, SlashEqual,
+	DoubleColon,
 
 	// Literals
 	Identifier, String, Integer,

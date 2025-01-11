@@ -4,15 +4,19 @@
 src ^
 output/src
 
+if ERRORLEVEL 1 exit
+
 "./tcc/tcc.exe" ^
 output/src/Program.c ^
 output/src/Program/Main.c ^
-output/src/Program/Player.c ^
+output/src/Program/Print.c ^
 output/src/Program/Math.c ^
 -g ^
 -w ^
 -o output/build/Main.exe
 
-ECHO ==============================
+if ERRORLEVEL 1 exit
+
+ECHO ===============================
 
 "./output/build/Main.exe"

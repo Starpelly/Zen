@@ -10,7 +10,7 @@ public class Transpiler
 	private CodeBuilder m_outputH = new .() ~ delete _;
 	private CodeBuilder m_outputC = new .() ~ delete _;
 
-	public List<Stmt> Statements { get; }
+	public readonly List<Stmt> Statements { get; }
 
 	public this(List<Stmt> statements)
 	{
@@ -20,14 +20,10 @@ public class Transpiler
 	/// 1. .h file, 2. .c file
 	public (String, String) Compile(String fileName)
 	{
-		m_outputH.AppendBanner("Auto-generated using the Zen compiler");
+		m_outputH.AppendBannerAutogen();
 		m_outputH.AppendEmptyLine();
 
 		m_outputH.AppendLine("#pragma once");
-		m_outputH.AppendEmptyLine();
-
-		m_outputH.AppendLine("#define true (1 == 1)");
-		m_outputH.AppendLine("#define false (!true)");
 		m_outputH.AppendEmptyLine();
 
 		for (let statement in Statements)
@@ -57,10 +53,11 @@ public class Transpiler
 			}
 		}
 
-		m_outputC.AppendBanner("Auto-generated using the Zen compiler");
+		m_outputC.AppendBannerAutogen();
 		m_outputC.AppendEmptyLine();
 
-		m_outputC.AppendLine("#include <stdio.h>");
+		m_outputC.AppendLine("#include \"../Zen.h\"");
+		m_outputC.AppendEmptyLine();
 
 		m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
 		m_outputC.AppendEmptyLine();

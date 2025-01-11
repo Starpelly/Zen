@@ -51,6 +51,11 @@ public class CodeBuilder
 		AppendLine("// ---------------------------------------------------------------------");
 	}
 
+	public void AppendBannerAutogen()
+	{
+		AppendBanner("Auto-generated using the Zen compiler");
+	}
+
 	public void Clear()
 	{
 		m_code.Clear();

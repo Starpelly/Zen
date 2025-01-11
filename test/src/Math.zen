@@ -1,0 +1,21 @@
+namespace Program;
+
+fun int add(int a, int b)
+{
+	return a + b;
+}
+
+fun int sub(int a, int b)
+{
+    return a - b;
+}
+
+fun int mult(int a, int b)
+{
+    return a * b;
+}
+
+fun int div(int a, int b)
+{
+    return a / b;
+}

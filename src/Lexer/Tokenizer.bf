@@ -31,17 +31,17 @@ public class Tokenizer
 		("using", .Using),
 	} ~ delete _;
 
-	private readonly List<Token> m_tokens = new .() ~ DeleteContainerAndDisposeItems!(_);
+	private readonly List<Token> m_tokens { get; } = new .();
 	private int m_start = 0;
 	private int m_current = 0;
 	private int m_line = 1;
 	private int m_lineCol = 0;
 
-	private String Source { get; } ~ delete _;
+	private readonly String Source { get; }
 
 	public this(String source)
 	{
-		Source = new .(source);
+		Source = source;
 	}
 
 	public List<Token> ScanTokens()

@@ -1,0 +1,31 @@
+using System;
+namespace Zen.Transpiler;
+
+public class StandardLib
+{
+	public void WriteZenHeader(String outString)
+	{
+		let builder = scope CodeBuilder();
+		defer outString.Append(builder.Code);
+
+		builder.AppendBannerAutogen();
+		builder.AppendEmptyLine();
+
+		builder.AppendLine("#pragma once");
+		builder.AppendEmptyLine();
+
+		builder.AppendLine("#include <stdio.h>");
+		builder.AppendEmptyLine();
+
+		builder.AppendLine("#define true  (1 == 1)");
+		builder.AppendLine("#define false (!true)");
+	}
+
+	public void WriteProgramFile(String outString)
+	{
+		let builder = scope CodeBuilder();
+		defer outString.Append(builder.Code);
+
+		builder.AppendBannerAutogen();
+	}
+}

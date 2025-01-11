@@ -5,20 +5,8 @@ fun int main()
 	if (true)
 	{
 		hello();
+		tester();
 	}
 
 	return 0;
-}
-
-fun int add(int a, int b)
-{
-	return a + b;
-}
-
-fun void hello()
-{
-	// Comments aren't included in the output.
-
-	printf("hello from zen!\n");
-	printf("%i", add(2, 2));
 }

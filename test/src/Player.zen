@@ -1,0 +1,16 @@
+namespace Program;
+
+fun void hello()
+{
+	// Comments aren't included in the output.
+
+	printf("hello from zen!\n");
+}
+
+fun void tester()
+{
+	printf("%i\n", add(2, 2));
+	printf("%i\n", sub(2, 2));
+	printf("%i\n", mult(2, 2));
+	printf("%i\n", div(2, 2));
+}

@@ -5,15 +5,6 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
-/*
-public struct Func<T>
-{
-	function T() f;
-
-	public T Invoke() => f();
-}
-*/
-
 public class ParseError
 {
 	public Token Token { get; }
@@ -30,18 +21,20 @@ public class Parser
 {
 	function T Func<T>();
 
-	private List<Stmt> m_statements = new .() ~ DeleteContainerAndItems!(_);
+	private readonly List<Stmt> m_statements = new .();
 	private int m_current = 0;
 
-	private List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
+	private readonly List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
 
-	public List<Token> Tokens { get; }
-	public List<ParseError> Errors => m_errors;
+	public readonly List<Token> Tokens { get; }
+	public readonly List<Stmt> PreviousStatements { get; }
+	public readonly List<ParseError> Errors => m_errors;
 
-	public this(List<Token> tokens)
+	public this(List<Token> tokens, List<Stmt> previousStatements)
 	{
 		this.Tokens = tokens;
+		this.PreviousStatements = previousStatements;
 	}
 
 	public Result<List<Stmt>> Parse()
@@ -246,6 +239,7 @@ public class Parser
 			let equals = previous();
 			let value = Assignment();
 
+			/*
 			if (let varExpr = expr as Expr.Variable)
 			{
 				let name = varExpr.Name;
@@ -254,6 +248,7 @@ public class Parser
 			if (let getExpr = expr as Expr.Get)
 			{
 			}
+			*/
 
 			error(equals, "Invalid assignment target.");
 		}

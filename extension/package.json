@@ -1,0 +1,25 @@
+{
+  "name": "zen-language",
+  "displayName": "Zen Language",
+  "description": "The Zen programming language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "zen",
+      "aliases": ["Zen", "zen"],
+      "extensions": [".zen"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "zen",
+      "scopeName": "source.zen",
+      "path": "./syntaxes/zen.tmLanguage.json"
+    }]
+  }
+}

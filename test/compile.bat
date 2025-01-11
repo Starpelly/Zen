@@ -1,16 +1,15 @@
 @echo off
-del Player.exe
 
 "../build/Debug_Win64/Zen/Zen.exe" ^
-src/Player.zen ^
+src ^
 output/src
 
 "./tcc/tcc.exe" ^
-output/src/Player.c ^
+output/src/Program/Main.c ^
 -g ^
 -w ^
--o output/build/Player.exe
+-o output/build/Main.exe
 
 ECHO ==============================
 
-"./output/build/Player.exe"
+"./output/build/Main.exe"

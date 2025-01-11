@@ -5,6 +5,15 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
+/*
+public struct Func<T>
+{
+	function T() f;
+
+	public T Invoke() => f();
+}
+*/
+
 public class ParseError
 {
 	public Token Token { get; }
@@ -19,6 +28,8 @@ public class ParseError
 
 public class Parser
 {
+	function T Func<T>();
+
 	private List<Stmt> m_statements = new .() ~ DeleteContainerAndItems!(_);
 	private int m_current = 0;
 
@@ -71,6 +82,12 @@ public class Parser
 			return StructStatement();
 		if (match(.Return))
 			return ReturnStatement();
+		if (match(.If))
+			return IfStatement();
+		if (match(.While))
+			return WhileStatement();
+		if (match(.Namespace))
+			return NamespaceStatement();
 		// if (match(.Print))
 		// 	return PrintStatement();
 
@@ -87,7 +104,7 @@ public class Parser
 
 	private Stmt expressionStatement()
 	{
-		let expr = expression();
+		let expr = Expression();
 		consume(.Semicolon, "Expected ';' after expression.");
 		return new Stmt.Expression(expr);
 	}
@@ -157,7 +174,7 @@ public class Parser
 
 	private Stmt.Print PrintStatement()
 	{
-		let value = expression();
+		let value = Expression();
 		consume(.Semicolon, "Expected ';' after value.");
 		return new .(value);
 	}
@@ -169,59 +186,230 @@ public class Parser
 
 		if (!check(.Semicolon))
 		{
-			value = expression();
+			value = Expression();
 		}
 
 		consume(.Semicolon, "Expected ';' after return value.");
 		return new .(keyword, value);
 	}
 
+	private Stmt.If IfStatement()
+	{
+		consume(.LeftParentheses, "Expected '(' after 'if'.");
+		let condition = Expression();
+		consume(.RightParenthesis, "Expected ')' after condition.");
+
+		let thenBranch = statement();
+		var elseBranch = default(Stmt);
+
+		if (match(.Else))
+		{
+			elseBranch = statement();
+		}
+
+		return new Stmt.If(condition, thenBranch, elseBranch);
+	}
+
+	private Stmt.While WhileStatement()
+	{
+		consume(.LeftParentheses, "Expected '(' after 'while'.");
+		let condition = Expression();
+		consume(.RightParenthesis, "Expected ')' after condition.");
+		let body = statement();
+
+		return new Stmt.While(condition, body);
+	}
+
+	private Stmt.Namespace NamespaceStatement()
+	{
+		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
+
+		consume(.Semicolon, "Expected ';' after namespace identifier.");
+		return new Stmt.Namespace(identity);
+	}
+
 	// ----------------------------------------------------------------
 	// Expressions
 	// ----------------------------------------------------------------
 
-	private Expr expression()
+	private Expr Expression()
 	{
-		if (match(.Identifier))
+		return Assignment();
+	}
+
+	private Expr Assignment()
+	{
+		let expr = Or();
+
+		if (match(.Equal))
 		{
-			let @base = previous();
+			let equals = previous();
+			let value = Assignment();
 
-			if (match(.LeftParentheses))
-				return functionCall(@base);
+			if (let varExpr = expr as Expr.Variable)
+			{
+				let name = varExpr.Name;
+			}
+
+			if (let getExpr = expr as Expr.Get)
+			{
+			}
+
+			error(equals, "Invalid assignment target.");
 		}
-		if (match(.String))
-			return stringLiteral();
-		if (match(.Integer))
-			return integerLiteral();
 
-		advance();
-		return null;
+		return expr;
 	}
 
-	private Expr stringLiteral()
+	private Expr Or()
 	{
-		return new Expr.StringLiteral(previous(), new .(previous().Lexeme));
+		var expr = And();
+
+		while (match(.Or))
+		{
+			let op = previous();
+			let right = And();
+			expr = new Expr.Logical(expr, op, right);
+		}
+
+		return expr;
 	}
 
-	private Expr integerLiteral()
+	private Expr And()
 	{
-		return new Expr.IntegerLiteral(previous().Literal.Get<int>());
+		var expr = Equality();
+
+		while (match(.And))
+		{
+			let op = previous();
+			let right = Equality();
+			expr = new Expr.Logical(expr, op, right);
+		}
+
+		return expr;
 	}
 
-	private Expr functionCall(Token callee)
+	private Expr Equality()
+	{
+		return parseLeftAssociativeBinaryOparation(
+			=> Comparison,
+			.BangEqual, .EqualEqual);
+	}
+
+	private Expr Comparison()
+	{
+		return parseLeftAssociativeBinaryOparation(
+			=> Addition,
+			.Greater, .GreaterEqual, .Less, .LessEqual);
+	}
+
+	private Expr Addition()
+	{
+		return parseLeftAssociativeBinaryOparation(
+				=> Multiplication,
+				.Minus, .Plus);
+	}
+
+	private Expr Multiplication()
+	{
+		return parseLeftAssociativeBinaryOparation(
+			=> Unary,
+			.Slash, .Star);
+	}
+
+	private Expr Unary()
+	{
+		if (match(.Bang, .Minus))
+		{
+			let op = previous();
+			let right = Unary();
+			return new Expr.Unary(op, right);
+		}
+
+		return Call();
+	}
+
+	private Expr Call()
+	{
+		var expr = Primary();
+
+		while (true)
+		{
+			if (match(.LeftParentheses))
+			{
+				expr = FinishCall(expr);
+			}
+			else if (match(.Dot))
+			{
+				let name = consume(.Identifier, "Expected property name after '.'.");
+				expr = new Expr.Get(expr, name);
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return expr;
+	}
+
+	private Expr FinishCall(Expr callee)
 	{
 		let arguments = new List<Expr>();
 		if (!check(.RightParenthesis))
 		{
 			repeat
 			{
-				arguments.Add(expression());
-			} while(match(.Comma));
+				arguments.Add(Expression());
+			} while (match(.Comma));
 		}
 
 		let paren = consume(.RightParenthesis, "Expected ')' after arguments.");
 
 		return new Expr.Call(callee, paren, arguments);
+	}
+
+	private Expr Primary()
+	{
+		if (match(.False)) return new Expr.Literal(Variant.Create<bool>(false));
+		if (match(.True)) return new Expr.Literal(Variant.Create<bool>(true));
+		if (match(.Null)) return new Expr.Literal(Variant.CreateFromBoxed(null));
+
+		if (match(.Integer, .String))
+		{
+			return new Expr.Literal(previous().Literal);
+		}
+
+		if (match(.Identifier))
+		{
+			return new Expr.Variable(previous());
+		}
+
+		if (match(.LeftParentheses))
+		{
+			let expr = Expression();
+			consume(.RightParenthesis, "Expected ')' after expression.");
+			return new Expr.Grouping(expr);
+		}
+
+		error(peek(), "Expected expression.");
+		return null;
+	}
+
+	private Expr parseLeftAssociativeBinaryOparation(
+		function Expr(Self this) higherPrecedence,
+		params TokenType[] tokenTypes)
+	{
+		var expr = higherPrecedence(this);
+
+		while (match(params tokenTypes))
+		{
+			let op = previous();
+			let right = higherPrecedence(this);
+			expr = new Expr.Binary(expr, op, right);
+		}
+
+		return expr;
 	}
 
 	// ----------------------------------------------------------------

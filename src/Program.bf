@@ -12,33 +12,57 @@ namespace Zen;
 class Program
 {
 	private const String testDir = "D:/Zen/test";
-	private const String testInputFile = $"{testDir}/src/Player.zen";
+	private const String testInputDir = $"{testDir}/src";
 	private const String testOutputDir = $"{testDir}/output/src";
+
+	private static int g_filesWritten = 0;
+	private static int g_errorCount = 0;
+	private static bool g_hadErrors = false;
 
 	public static int Main(String[] args)
 	{
-		let transpilerWatch = scope Stopwatch();
-		var hadErrors = false;
-		var errorCount = 0;
-		var filesWritten = 0;
+		let inputSrcDir = (args.Count == 0) ? testInputDir : args[0];
+		let outputSrcDir = Path.Combine(.. scope .(), ((args.Count < 2) ? testOutputDir : args[1]), "Program");
 
-		let inputFile = (args.Count == 0) ? testInputFile : args[0];
-		let outputSrcPath = (args.Count < 2) ? testOutputDir : args[1];
-
-		let inputFileName = Path.GetFileNameWithoutExtension(inputFile, .. scope .());
-
-		let outputFileH = Path.Combine(.. scope .(), outputSrcPath, scope $"{inputFileName}.h");
-		let outputFileC = Path.Combine(.. scope .(), outputSrcPath, scope $"{inputFileName}.c");
+		Directory.CreateDirectory(outputSrcDir);
 
 		let originalConsoleColor = Console.ForegroundColor;
 		defer { Console.ForegroundColor = originalConsoleColor; }
 
 		Console.WriteLine("Transpiling...");
+
+		let transpilerWatch = scope Stopwatch();
 		transpilerWatch.Start();
 
-		let text = scope String();
-		if (File.ReadAllText(inputFile, text) case .Ok)
+		parseFile(inputSrcDir, outputSrcDir, "Main.zen");
+
+		transpilerWatch.Stop();
+
+		if (!g_hadErrors)
 		{
+			Console.WriteLine(scope $"Zen transpilation time: {transpilerWatch.Elapsed.TotalSeconds.ToString(.. scope .(), "0.00", CultureInfo.InvariantCulture)}s");
+			// Console.WriteLine(scope $"{filesWritten} {(filesWritten > 1) ? "files" : "file" } generated");
+		}
+		else
+		{
+			Console.WriteLine(scope $"Errors: {g_errorCount}");
+			Console.WriteLine("Transpile failed.");
+		}
+
+		return 0;
+	}
+
+	private static void parseFile(String inputSrcDir, String outputSrcDir, String fileName)
+	{
+		let inputFilePath = Path.Combine(.. scope .(), inputSrcDir, fileName);
+		let inputFileName = Path.GetFileNameWithoutExtension(inputFilePath, .. scope .());
+
+		let text = scope String();
+		if (File.ReadAllText(inputFilePath, text) case .Ok)
+		{
+			let outputFileH = Path.Combine(.. scope .(), outputSrcDir, scope $"{inputFileName}.h");
+			let outputFileC = Path.Combine(.. scope .(), outputSrcDir, scope $"{inputFileName}.c");
+
 			let tokenizer = scope Tokenizer(text);
 			let tokens = tokenizer.ScanTokens();
 
@@ -46,40 +70,25 @@ class Program
 			if (parser.Parse() case .Ok(let statements))
 			{
 				let compiler = scope Transpiler(statements);
-				let output = compiler.Compile();
+				let output = compiler.Compile(inputFileName);
 
 				File.WriteAllText(outputFileH, output.0);
 				File.WriteAllText(outputFileC, output.1);
 
-				filesWritten++;
+				g_filesWritten++;
 			}
 			else
 			{
 				Console.ForegroundColor = .Red;
 				for (let error in parser.Errors)
 				{
-					Console.WriteLine(scope $"PARSING ERROR: {error.Message} at line {error.Token.Line}:{error.Token.Char}");
+					Console.WriteLine(scope $"PARSING ERROR: {error.Message} at line {error.Token.Line}:{error.Token.Col}");
 
-					++errorCount;
+					++g_errorCount;
 				}
 
-				hadErrors = true;
+				g_hadErrors = true;
 			}
 		}
-
-		transpilerWatch.Stop();
-
-		if (!hadErrors)
-		{
-			Console.WriteLine(scope $"Zen transpilation time: {transpilerWatch.Elapsed.TotalSeconds.ToString(.. scope .(), "0.00", CultureInfo.InvariantCulture)}s");
-			// Console.WriteLine(scope $"{filesWritten} {(filesWritten > 1) ? "files" : "file" } generated");
-		}
-		else
-		{
-			Console.WriteLine(scope $"Errors: {errorCount}");
-			Console.WriteLine("Transpile failed.");
-		}
-
-		return 0;
 	}
 }

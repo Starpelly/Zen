@@ -24,15 +24,18 @@ public class Tokenizer
 		("let", .Let),
 		("fun", .Fun),
 		("switch", .Switch),
-		("enum", .Enum),
 		("match", .Match),
+		("enum", .Enum),
 		("struct", .Struct),
+		("namespace", .Namespace),
+		("using", .Using),
 	} ~ delete _;
 
 	private readonly List<Token> m_tokens = new .() ~ DeleteContainerAndDisposeItems!(_);
 	private int m_start = 0;
 	private int m_current = 0;
 	private int m_line = 1;
+	private int m_lineCol = 0;
 
 	private String Source { get; } ~ delete _;
 
@@ -88,7 +91,11 @@ public class Tokenizer
 				// once the '*/' characters are found.
 				while (!isAtEnd())
 				{
-					if (peek() == '\n') m_line++;
+					if (peek() == '\n')
+					{
+						m_line++;
+						m_lineCol = 0;
+					}
 					if (match('*', true) && peek() == '/')
 					{
 						advance();
@@ -105,12 +112,16 @@ public class Tokenizer
 
 		case ' ':
 		case '\r':
+			// Ignore white-space.
+			break;
 		case '\t':
 			// Ignore white-space.
+			m_lineCol += 3;
 			break;
 
 		case '\n':
 			m_line++;
+			m_lineCol = 0;
 			break;
 
 		case '"': scanString(); break;
@@ -140,7 +151,7 @@ public class Tokenizer
 	private void addToken(TokenType type, Variant literal)
 	{
 		let text = substring(m_start, m_current);
-		m_tokens.Add(.(type, literal, text, m_line, m_current));
+		m_tokens.Add(.(type, literal, text, m_line, m_lineCol));
 	}
 
 	private void scanString()
@@ -233,6 +244,7 @@ public class Tokenizer
 	private void advance()
 	{
 		m_current++;
+		m_lineCol++;
 		// return Source[m_current - 1];
 	}
 

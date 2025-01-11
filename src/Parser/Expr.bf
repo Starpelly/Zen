@@ -7,13 +7,27 @@ namespace Zen.Parser;
 
 public abstract class Expr
 {
+	public class Binary : Expr
+	{
+		public Expr Left { get; } ~ delete _;
+		public Token Operator { get; }
+		public Expr Right { get; } ~ delete _;
+
+		public this(Expr left, Token @operator, Expr right)
+		{
+			this.Left = left;
+			this.Operator = @operator;
+			this.Right = right;
+		}
+	}
+
 	public class Call : Expr
 	{
-		public Token Callee { get; }
+		public Expr Callee { get; } ~ delete _;
 		public Token Paren { get; }
 		public List<Expr> Arguments { get; } ~ DeleteContainerAndItems!(_);
 
-		public this(Token callee, Token paren, List<Expr> arguments)
+		public this(Expr callee, Token paren, List<Expr> arguments)
 		{
 			this.Callee = callee;
 			this.Paren = paren;
@@ -21,35 +35,71 @@ public abstract class Expr
 		}
 	}
 
-	public class StringLiteral : Expr
+	public class Logical : Expr
 	{
-		public Token Token { get; }
-		public String Value { get; } ~ delete _;
+		public Expr Left { get; } ~ delete _;
+		public Token Operator { get; }
+		public Expr Right { get; } ~ delete _;
 
-		public this(Token token, String value)
+		public this(Expr left, Token @operator, Expr right)
 		{
-			this.Token = token;
-			this.Value = value;
+			this.Left = left;
+			this.Operator = @operator;
+			this.Right = right;
 		}
 	}
 
 	public class Literal : Expr
 	{
-		public Object Value { get; }
+		public Variant Value { get; }
 
-		public this(Object value)
+		public this(Variant value)
 		{
 			this.Value = value;
 		}
 	}
 
-	public class IntegerLiteral : Expr
+	public class Unary : Expr
 	{
-		public int Value { get; }
+		public Token Operator { get; }
+		public Expr Right { get; } ~ delete _;
 
-		public this(int value)
+		public this(Token @operator, Expr right)
 		{
-			this.Value = value;
+			this.Operator = @operator;
+			this.Right = right;
+		}
+	}
+
+	public class Get : Expr
+	{
+		public Expr Object { get; } ~ delete _;
+		public Token Name { get; }
+
+		public this(Expr object, Token name)
+		{
+			this.Object = object;
+			this.Name = name;
+		}
+	}
+
+	public class Grouping : Expr
+	{
+		public Expr Expression { get; } ~ delete _;
+
+		public this(Expr expression)
+		{
+			this.Expression = expression;
+		}
+	}
+
+	public class Variable : Expr
+	{
+		public Token Name { get; }
+
+		public this(Token name)
+		{
+			this.Name = name;
 		}
 	}
 }

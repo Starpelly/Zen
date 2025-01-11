@@ -1,0 +1,105 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Zen",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#functions"
+		},
+		{
+			"include": "#types"
+		},
+
+		{
+			"include": "#preprocessor-rule-conditional"
+        },
+		{
+			"include": "#preprocessor-alias-definition"
+		},
+		{
+			"include": "#preprocessor-function-definition"
+		},
+		{
+            "include": "#match"
+        }
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.zen",
+				"match": "\\b(if|while|for|return|let|var|match|true|false|public|fun|load|using|static|defer|struct|class|private|enum|define|namespace|scope|new|delete|self|trustme|yolo|c99)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.zen",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.zen",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comments": {
+			"patterns": [
+				{
+                    "name": "comment.block.zen",
+                    "begin": "/\\*",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.zen"
+                        }
+                    },
+                    "end": "\\*/",
+                    "endCaptures": {
+                        "0": {
+                            "name": "punctuation.definition.comment.zen"
+                        }
+                    }
+                },
+				{
+					"name": "comment.line.double-slash.zen",
+					"begin": "(\\/\\/)",
+					"end": "(?=\\n)"
+				}
+			]
+		},
+		"numbers": {
+			"patterns": [
+			  {
+				"name": "constant.numeric.customlang",
+				"match": "\\b\\d+\\b"
+			  }
+			]
+		},
+		"functions": {
+			"patterns": [
+			  {
+				"name": "support.function.customlang",
+				"match": "\\b(dsddsasdsasdsadsdsd)\\b"
+			  }
+			]
+		},
+		"types": {
+			"patterns": [
+			  {
+				"name": "support.type.customlang",
+				"match": "\\b(int|float|void|string)\\b"
+			  }
+			]
+		}
+	},
+	"scopeName": "source.zen"
+}

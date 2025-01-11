@@ -94,4 +94,40 @@ public abstract class Stmt
 			this.Value = value;
 		}
 	}
+
+	public class If : Stmt
+	{
+		public Expr Condition { get; } ~ delete _;
+		public Stmt ThenBranch { get; } ~ delete _;
+		public Stmt ElseBranch { get; } ~ delete _;
+
+		public this(Expr condition, Stmt thenBranch, Stmt elseBranch)
+		{
+			this.Condition = condition;
+			this.ThenBranch = thenBranch;
+			this.ElseBranch = elseBranch;
+		}
+	}
+
+	public class While : Stmt
+	{
+		public Expr Condition { get; } ~ delete _;
+		public Stmt Body { get; } ~ delete _;
+
+		public this(Expr condition, Stmt body)
+		{
+			this.Condition = condition;
+			this.Body = body;
+		}
+	}
+
+	public class Namespace : Stmt
+	{
+		public Token Name { get; }
+
+		public this(Token name)
+		{
+			this.Name = name;
+		}
+	}
 }

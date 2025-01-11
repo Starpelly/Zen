@@ -18,12 +18,16 @@ public class Transpiler
 	}
 
 	/// 1. .h file, 2. .c file
-	public (String, String) Compile()
+	public (String, String) Compile(String fileName)
 	{
 		m_outputH.AppendBanner("Auto-generated using the Zen compiler");
 		m_outputH.AppendEmptyLine();
 
 		m_outputH.AppendLine("#pragma once");
+		m_outputH.AppendEmptyLine();
+
+		m_outputH.AppendLine("#define true (1 == 1)");
+		m_outputH.AppendLine("#define false (!true)");
 		m_outputH.AppendEmptyLine();
 
 		for (let statement in Statements)
@@ -57,83 +61,15 @@ public class Transpiler
 		m_outputC.AppendEmptyLine();
 
 		m_outputC.AppendLine("#include <stdio.h>");
-		m_outputC.AppendLine("#include \"Player.h\"");
+
+		m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
 		m_outputC.AppendEmptyLine();
 
 		for (let statement in Statements)
 		{
 			if (statement != null)
 			{
-				if (statement.GetType() == typeof(Stmt.Function))
-				{
-					let fun = ((Stmt.Function)statement);
-
-					// if (fun.Kind == .Main)
-					{
-						let parameters = scope String();
-
-						for (let param in fun.Parameters)
-						{
-							parameters.Append(scope $"{param.Type.Lexeme} {param.Name.Lexeme}");
-							if (param != fun.Parameters.Back)
-								parameters.Append(", ");
-						}
-
-						m_outputC.AppendLine(scope $"{fun.Type.Lexeme} {fun.Name.Lexeme}({parameters})");
-						m_outputC.AppendLine("{");
-						m_outputC.IncreaseTab();
-						{
-							for (let bodyStatement in fun.Body)
-							{
-								if (bodyStatement.GetType() == typeof(Stmt.Print))
-								{
-									let print = ((Stmt.Print)bodyStatement);
-									let expr = ((Expr.Call)print.InnerExpression);
-
-									let str = (Expr.StringLiteral)expr.Arguments[0];
-									m_outputC.AppendLine(scope $"printf({str.Value});");
-								}
-
-								if (bodyStatement.GetType() == typeof(Stmt.Expression))
-								{
-									let expr = (Stmt.Expression)bodyStatement;
-
-									if (expr.InnerExpression.GetType() == typeof(Expr.Call))
-									{
-										let call = (Expr.Call)expr.InnerExpression;
-
-										let arguments = scope String();
-
-										for (let argument in call.Arguments)
-										{
-											// arguments.Append(scope $"{((Expr.StringLiteral)argument).Value}");
-
-											let lexeme = expressionToString(..scope .(), argument);
-
-											arguments.Append(scope $"{lexeme}");
-											if (argument != call.Arguments.Back)
-												arguments.Append(", ");
-										}
-
-										m_outputC.AppendLine(scope $"{call.Callee.Lexeme}({arguments});");
-									}
-								}
-
-								if (bodyStatement.GetType() == typeof(Stmt.Return))
-								{
-									let ret = (Stmt.Return)bodyStatement;
-									let lexeme = expressionToString(..scope .(), ret.Value);
-									m_outputC.AppendLine(scope $"return {lexeme};");
-								}
-							}
-						}
-						m_outputC.DecreaseTab();
-						m_outputC.AppendLine("}");
-					}
-
-					if (fun != Statements.Back)
-						m_outputC.AppendEmptyLine();
-				}
+				stmtToString(ref m_outputC, statement);
 			}
 		}
 
@@ -141,17 +77,144 @@ public class Transpiler
 	}
 
 	[Inline]
-	private void expressionToString(String outLexeme, Expr expr)
+	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
 	{
-		switch (expr.GetType())
+		// outLexeme.AppendTabs();
+
+		if (let fun = stmt as Stmt.Function)
 		{
-		case typeof(Expr.StringLiteral):
-			outLexeme.Append(((Expr.StringLiteral)expr).Value);
-			break;
-		case typeof(Expr.IntegerLiteral):
-			outLexeme.Append(((Expr.IntegerLiteral)expr).Value.ToString(.. scope .()));
-			break;
+			let parameters = scope String();
+
+			for (let param in fun.Parameters)
+			{
+				parameters.Append(scope $"{param.Type.Lexeme} {param.Name.Lexeme}");
+				if (param != fun.Parameters.Back)
+					parameters.Append(", ");
+			}
+
+			m_outputC.AppendLine(scope $"{fun.Type.Lexeme} {fun.Name.Lexeme}({parameters})");
+			m_outputC.AppendLine("{");
+			m_outputC.IncreaseTab();
+			{
+				for (let bodyStatement in fun.Body)
+				{
+					stmtToString(ref m_outputC, bodyStatement);
+				}
+			}
+			m_outputC.DecreaseTab();
+			m_outputC.AppendLine("}");
+
+			// outLexeme.AppendEmptyLine();
 		}
 
+		if (let block = stmt as Stmt.Block)
+		{
+			for (let blockStatement in block.Statements)
+			{
+				stmtToString(ref outLexeme, blockStatement);
+			}
+		}
+
+		if (let expr = stmt as Stmt.Expression)
+		{
+			let line = expressionToString(.. scope .(), expr.InnerExpression);
+			outLexeme.AppendLine(scope $"{line};");
+		}
+
+		if (let ret = stmt as Stmt.Return)
+		{
+			let lexeme = expressionToString(..scope .(), ret.Value);
+			outLexeme.AppendLine(scope $"return {lexeme};");
+		}
+
+		if (let @if = stmt as Stmt.If)
+		{
+			let args = expressionToString(.. scope .(), @if.Condition);
+			outLexeme.AppendLine(scope $"if ({args})");
+
+			outLexeme.AppendLine("{");
+			outLexeme.IncreaseTab();
+			{
+				stmtToString(ref m_outputC, @if.ThenBranch);
+			}
+			outLexeme.DecreaseTab();
+			outLexeme.AppendLine("}");
+		}
+
+		if (let @while = stmt as Stmt.While)
+		{
+			let args = expressionToString(.. scope .(), @while.Condition);
+			outLexeme.AppendLine(scope $"while ({args})");
+
+			outLexeme.AppendLine("{");
+			outLexeme.IncreaseTab();
+			{
+				stmtToString(ref m_outputC, @while.Body);
+			}
+			outLexeme.DecreaseTab();
+			outLexeme.AppendLine("}");
+		}
+	}
+
+	[Inline]
+	private void expressionToString(String outLexeme, Expr expr)
+	{
+		if (let variable = expr as Expr.Variable)
+		{
+			outLexeme.Append(variable.Name.Lexeme);
+		}
+
+		if (let call = expr as Expr.Call)
+		{
+			let name = expressionToString(.. scope .(), call.Callee);
+
+			let arguments = scope String();
+
+			for (let argument in call.Arguments)
+			{
+				arguments.Append(expressionToString(.. scope .(), argument));
+
+				/*
+				let lexeme = expressionToString(..scope .(), argument);
+
+				arguments.Append(scope $"{lexeme}");
+
+				*/
+
+				if (argument != call.Arguments.Back)
+					arguments.Append(", ");
+			}
+
+			outLexeme.Append(scope $"{name}({arguments})");
+		}
+
+		if (let literal = expr as Expr.Literal)
+		{
+			switch (literal.Value.VariantType)
+			{
+			case typeof(int):
+				outLexeme.Append(literal.Value.Get<int>());
+				break;
+			case typeof(bool):
+				outLexeme.Append(literal.Value.Get<bool>() ? "true" : "false");
+				break;
+			case typeof(StringView):
+				let str = scope String();
+				str.Append('"');
+				str.Append(literal.Value.Get<StringView>());
+				str.Append('"');
+				outLexeme.Append(str);
+				break;
+			}
+		}
+
+		if (let binary = expr as Expr.Binary)
+		{
+			let left = expressionToString(.. scope .(), binary.Left);
+			let op = binary.Operator.Lexeme;
+			let right = expressionToString(.. scope .(), binary.Right);
+
+			outLexeme.Append(scope $"{left} {op} {right}");
+		}
 	}
 }

@@ -8,15 +8,15 @@ public struct Token : IDisposable
 	public Variant Literal { get; set mut; }
 	public StringView Lexeme { get; }
 	public int Line { get; }
-	public int Char { get; }
+	public int Col { get; }
 
-	public this(TokenType type, Variant literal, StringView lexeme, int line, int char)
+	public this(TokenType type, Variant literal, StringView lexeme, int line, int col)
 	{
 		this.Type = type;
 		this.Literal = literal;
 		this.Lexeme = lexeme;
 		this.Line = line;
-		this.Char = char;
+		this.Col = col;
 	}
 
 	public void Dispose() mut

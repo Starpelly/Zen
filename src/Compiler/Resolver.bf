@@ -259,25 +259,47 @@ public class Resolver
 				return;
 			}
 
+			mixin ambigRefError(Token one, Token two)
+			{
+				let childNString = scope String();
+				for (let child in expr.Namespaces)
+				{
+					childNString.Append("::");
+					childNString.Append(child.Lexeme);
+				}
+				childNString.Append("::");
+				childNString.Append(expr.Callee.Name.Lexeme);
+
+				error(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+				return;
+			}
+
+			// Check if the function we're calling is global.
 			if (expr.Namespaces.Count > 0)
 			{
 				let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
 
+				if (m_environment.Get(namespaceKey) case .Ok)
+				{
+					return;
+				}
+
 				var foundUsing = false;
 				var foundUsings = scope NamespaceList();
+				var foundUsingName = default(Token);
 				for (let @using in m_currentUsings)
 				{
-					if (foundUsing)
-					{
-						error(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{foundUsings[0].Lexeme}' and '{@using.Name.Lexeme}'.");
-						return;
-					}
-
 					if (m_environment.Get(@using.Name) case .Ok)
 					{
-						addNamespaceToExpr(@using.Name);
+						if (foundUsing)
+						{
+							ambigRefError!(foundUsings[0], @using.Name);
+						}
+
+						// addNamespaceToExpr(@using.Name);
 						foundUsing = true;
 						foundUsings.Add(@using.Name);
+						foundUsingName = @using.Name;
 					}
 				}
 
@@ -288,9 +310,31 @@ public class Resolver
 						addNamespaceToExpr(m_currentNamespace.Front);
 					}
 				}
+				else
+				{
+					// Test if the same type exists in the current namespace.
+
+					let temp = scope NamespaceList();
+					temp.AddFront(m_currentNamespace.Front);
+					temp.AddRange(expr.Namespaces);
+
+					let tempStr = temp.NamespaceListToString(.. scope .());
+					if (m_environment.Get(tempStr) case .Ok)
+					{
+						ambigRefError!(foundUsings[0], m_currentNamespace.Front);
+					}
+					else
+					{
+						addNamespaceToExpr(foundUsingName);
+					}
+				}
 			}
 			else
 			{
+				// If it isn't global, we can cheat and just add the current push the current namespace so the compiler-
+				// thinks it's part of the namespace.
+				//
+				// We've already checked for duplicates earlier in the function definition.
 				addNamespaceToExpr(m_currentNamespace.Front);
 			}
 

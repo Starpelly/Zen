@@ -70,6 +70,7 @@ public class Parser
 			return .Err;
 		}
 
+		m_statements.Add(new Stmt.EOF());
 		return .Ok(m_statements);
 	}
 
@@ -95,8 +96,6 @@ public class Parser
 		{
 			return null;
 		}
-		if (match(.EOF))
-			return new Stmt.EOF();
 
 		// if (match(.Print))
 		// 	return PrintStatement();

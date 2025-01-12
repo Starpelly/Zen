@@ -11,7 +11,7 @@ public fun void Main()
 
 	PrintMath();
 
-	Console::WriteLine();
+	// Console::WriteLine();
 
 	return 0;
 }

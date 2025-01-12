@@ -5,6 +5,26 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
+typealias NamespaceList = List<Token>;
+
+static
+{
+	public static void NamespaceListToString(this NamespaceList list, String strBuffer)
+	{
+		if (list.Count > 0)
+		{
+			strBuffer.Append(list[0].Lexeme);
+			for (let i < list.Count)
+			{
+				if (i == 0) continue;
+
+				strBuffer.Append("::");
+				strBuffer.Append(list[i].Lexeme);
+			}
+		}
+	}
+}
+
 public class ParseError : ICompilerError
 {
 	public Token Token { get; }
@@ -130,8 +150,7 @@ public class Parser
 
 		// var parentNamespace = m_currentNamespace;
 
-		let children = new List<Token>();
-
+		let children = scope List<Token>();
 		while (!check(.Semicolon))
 		{
 			if (match(.DoubleColon))
@@ -148,7 +167,7 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after namespace identifier.");
 
-		m_currentNamespace = new Stmt.Namespace(identity, children);
+		m_currentNamespace = new Stmt.Namespace(new NamespaceList()..AddFront(identity)..AddRange(children));
 		return m_currentNamespace;
 	}
 
@@ -371,7 +390,7 @@ public class Parser
 	{
 		var expr = Primary();
 
-		List<Token> namespaces = null;
+		NamespaceList namespaces = null;
 		mixin createNamespaces()
 		{
 			if (namespaces == null)
@@ -379,13 +398,12 @@ public class Parser
 				namespaces = new .();
 			}
 		}
-
 		while (true)
 		{
 			if (match(.LeftParentheses))
 			{
 				createNamespaces!();
-				expr = FinishCall((Expr.Variable)expr, ref namespaces);
+				expr = FinishCall((Expr.Variable)expr, namespaces);
 			}
 			else if (match(.DoubleColon))
 			{
@@ -409,7 +427,7 @@ public class Parser
 		return expr;
 	}
 
-	private Expr FinishCall(Expr.Variable callee, ref List<Token> namespaces)
+	private Expr FinishCall(Expr.Variable callee, NamespaceList namespaces)
 	{
 		let arguments = new List<Expr>();
 		if (!check(.RightParenthesis))

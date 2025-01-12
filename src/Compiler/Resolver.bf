@@ -105,7 +105,7 @@ public class Resolver
 		// let enclosingNamespace = m_currentNamespace;
 		m_currentNamespace = stmt;
 
-		let nsString = stmt.ToString(.. scope .());
+		let nsString = stmt.List.NamespaceListToString(.. scope .());
 		if (m_environment.Get(nsString) case .Ok(let val))
 		{
 			// No error, this is why namespaces exist at all.
@@ -127,7 +127,7 @@ public class Resolver
 		ZenNamespace @namespaceToAdd = null;
 		if (stmt.Namespace != null)
 		{
-			let stmtNSStr = stmt.Namespace.ToString(.. scope .());
+			let stmtNSStr = stmt.Namespace.List.NamespaceListToString(.. scope .());
 			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
 			{
 				@namespaceToAdd = @namespace.Get<ZenNamespace>();
@@ -203,9 +203,9 @@ public class Resolver
 		{
 			if (expr.Callee.Name.Lexeme == "printf") return; // Temp
 
-			mixin addDefaultNamespaceToExpr()
+			void addDefaultNamespaceToExpr()
 			{
-				expr.Namespaces.AddFront(m_currentNamespace.Name);
+				expr.Namespaces.AddFront(m_currentNamespace.Front);
 			}
 
 			mixin notAvailableError()
@@ -216,18 +216,18 @@ public class Resolver
 
 			if (expr.Namespaces.Count > 0)
 			{
-				let namespaceKey = scope Stmt.Namespace(expr.Namespaces).ToString(.. scope .());
+				let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
 				if (m_environment.Get(namespaceKey) case .Err)
 				{
-					addDefaultNamespaceToExpr!();
+					addDefaultNamespaceToExpr();
 				}
 			}
 			else
 			{
-				addDefaultNamespaceToExpr!();
+				addDefaultNamespaceToExpr();
 			}
 
-			let namespaceKey = scope Stmt.Namespace(expr.Namespaces).ToString(.. scope .());
+			let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
 			if (m_environment.Get(namespaceKey) case .Ok(let val))
 			{
 				let zenNamespace = val.Get<ZenNamespace>();

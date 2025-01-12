@@ -31,7 +31,7 @@ public class ZenNamespace
 
 	public this(Stmt.Namespace @namespace)
 	{
-		this.Name = @namespace.ToString(.. new .());
+		this.Name = @namespace.List.NamespaceListToString(.. new .());
 	}
 
 	public this(String name, Self parent, Dictionary<StringView, ZenFunction> functions)

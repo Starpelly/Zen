@@ -97,15 +97,11 @@ public class Transpiler
 	{
 		if (ns == null) return;
 
-		outStr.Append(scope $"{ns.Name.Lexeme}_");
-		for (let child in ns.Children)
-		{
-			outStr.Append(scope $"{child.Lexeme}_");
-		}
+		writeNamespace(outStr, ns.List);
 	}
 
 	[Inline]
-	private static void writeNamespace(String outStr, List<Token> tokens)
+	private static void writeNamespace(String outStr, NamespaceList tokens)
 	{
 		for (let token in tokens)
 		{

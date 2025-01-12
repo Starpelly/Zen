@@ -21,73 +21,12 @@ public abstract class Stmt
 
 	public class Namespace : Stmt
 	{
-		public Token Name { get; }
-		public List<Token> Children { get; } ~ delete _;
+		public NamespaceList List { get; } ~ delete _;
+		public Token Front => List.Front;
 
-		public this(Token name, List<Token> children)
+		public this(NamespaceList list)
 		{
-			this.Name = name;
-			this.Children = children;
-		}
-
-		public this(List<Token> tokens)
-		{
-			Children = new .();
-			if (tokens.Count > 0)
-			{
-				Name = tokens[0];
-				if (tokens.Count > 1)
-				{
-					for (let i < tokens.Count)
-					{
-						if (i == 0) continue;
-						Children.Add(tokens[i]);
-					}
-				}
-			}
-		}
-
-		public static bool operator == (Self a, Self b)
-		{
-			if (a.Name.Lexeme != b.Name.Lexeme) return false;
-			if (a.Children.Count != b.Children.Count) return false;
-
-			for (let i < a.Children.Count)
-			{
-				if (a.Children[i].Lexeme != b.Children[i].Lexeme)
-					return false;
-			}
-
-			return true;
-		}
-
-		public static bool operator != (Self a, Self b)
-		{
-			return !(a == b);
-		}
-
-		public static bool CompareChildrenLexeme(List<Token> a, List<Token> b)
-		{
-			if (a.IsEmpty && b.IsEmpty) return true;
-			if (a.Count != b.Count) return false;
-
-			for (let i < a.Count)
-			{
-				if (a[i].Lexeme != b[i].Lexeme)
-					return false;
-			}
-
-			return true;
-		}
-
-		public override void ToString(String strBuffer)
-		{
-			strBuffer.Append(Name.Lexeme);
-			for (let child in Children)
-			{
-				strBuffer.Append("::");
-				strBuffer.Append(child.Lexeme);
-			}
+			this.List = list;
 		}
 	}
 

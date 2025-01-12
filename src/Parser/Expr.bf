@@ -26,9 +26,9 @@ public abstract class Expr
 		public Expr.Variable Callee { get; } ~ delete _;
 		public Token Paren { get; }
 		public List<Expr> Arguments { get; } ~ DeleteContainerAndItems!(_);
-		public List<Token> Namespaces { get; } ~ delete _;
+		public NamespaceList Namespaces { get; } ~ delete _;
 
-		public this(Expr.Variable callee, Token paren, List<Expr> arguments, List<Token> namespaces)
+		public this(Expr.Variable callee, Token paren, List<Expr> arguments, NamespaceList namespaces)
 		{
 			this.Callee = callee;
 			this.Paren = paren;

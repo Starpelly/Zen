@@ -64,23 +64,6 @@ public class Parser
 			m_statements.Add(declaration());
 		}
 
-		// Type checking
-		let functionNames = scope List<StringView>();
-		for (let statement in m_statements)
-		{
-			if (statement.GetType() == typeof(Stmt.Function))
-			{
-				let fun = (Stmt.Function)statement;
-
-				if (functionNames.Contains(fun.Name.Lexeme))
-				{
-					error(fun.Name, "Function with name already exists!");
-				}
-
-				functionNames.Add(fun.Name.Lexeme);
-			}
-		}
-
 		if (m_hadErrors)
 		{
 			DeleteContainerAndItems!(m_statements);
@@ -106,6 +89,11 @@ public class Parser
 			return WhileStatement();
 		if (match(.CBlock))
 			return CBlockStatement();
+		if (match(.Public) || match(.Private))
+		{
+			return null;
+		}	
+
 		// if (match(.Print))
 		// 	return PrintStatement();
 
@@ -173,12 +161,17 @@ public class Parser
 
 	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
 	{
+		if (past(2).Type != .Public && past(2).Type != .Private)
+		{
+			error(peek(), scope $"Expected accessor before 'fun'.");
+		}
+
 		var kind;
 
 		let type = consume(.Identifier, scope $"Expected {kind} type.");
 		let name = consume(.Identifier, scope $"Expected {kind} name.");
 
-		if (name.Lexeme == "main")
+		if (name.Lexeme == "Main")
 		{
 			kind = .Main;
 		}
@@ -547,6 +540,11 @@ public class Parser
 	private Token previous()
 	{
 		return Tokens[m_current - 1];
+	}
+
+	private Token past(int count)
+	{
+		return Tokens[m_current - count];
 	}
 
 	private Token next()

@@ -30,6 +30,8 @@ public class Tokenizer
 		("namespace", .Namespace),
 		("using", .Using),
 		("cblock", .CBlock),
+		("public", .Public),
+		("private", .Private),
 	} ~ delete _;
 
 	private readonly List<Token> m_tokens { get; } = new .();

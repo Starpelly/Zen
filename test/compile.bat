@@ -2,21 +2,21 @@
 
 "../build/Debug_Win64/Zen/Zen.exe" ^
 src ^
-output/src
+build/codegen
 
 if ERRORLEVEL 1 exit
 
 "./tcc/tcc.exe" ^
-output/src/Program.c ^
-output/src/Program/Main.c ^
-output/src/Program/Print.c ^
-output/src/Program/Math.c ^
+build/codegen/Program.c ^
+build/codegen/Program/Main.c ^
+build/codegen/Program/Print.c ^
+build/codegen/Program/Math.c ^
 -g ^
 -w ^
--o output/build/Main.exe
+-o build/bin/Main.exe
 
 if ERRORLEVEL 1 exit
 
 ECHO ===============================
 
-"./output/build/Main.exe"
+"./build/bin/Main.exe"

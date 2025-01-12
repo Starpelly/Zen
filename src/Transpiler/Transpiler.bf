@@ -133,6 +133,11 @@ public class Transpiler
 			}
 			funcName.Append(fun.Name.Lexeme);
 
+			if (fun.Kind == .Main)
+			{
+				funcName.Clear();
+				funcName.Append("main");
+			}
 			outLexeme.AppendLine(scope $"{fun.Type.Lexeme} {funcName}({parameters})");
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();

@@ -1,26 +1,26 @@
 namespace Program::Math;
 
-fun int Add(int a, int b)
+public fun int Add(int a, int b)
 {
 	return a + b;
 }
 
-fun int Sub(int a, int b)
+public fun int Sub(int a, int b)
 {
     return a - b;
 }
 
-fun int Mul(int a, int b)
+public fun int Mul(int a, int b)
 {
     return a * b;
 }
 
-fun int Div(int a, int b)
+public fun int Div(int a, int b)
 {
     return a / b;
 }
 
-fun int Mod(int a, int b)
+public fun int Mod(int a, int b)
 {
     return a % b;
 }

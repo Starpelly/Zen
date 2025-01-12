@@ -70,6 +70,10 @@ public class Resolver
 
 	private void resolveBody(Stmt statement)
 	{
+		if (let @namespace = statement as Stmt.Namespace)
+		{
+			visitNamespaceStmtBody(@namespace);
+		}
 		if (let fun = statement as Stmt.Function)
 		{
 			visitFunctionStmtBody(fun);
@@ -118,6 +122,11 @@ public class Resolver
 		// m_currentNamespace = enclosingNamespace;
 	}
 
+	private void visitNamespaceStmtBody(Stmt.Namespace stmt)
+	{
+		m_currentNamespace = stmt;
+	}
+
 	private void visitFunctionStmtDefinition(Stmt.Function stmt)
 	{
 		// Function already exists
@@ -154,15 +163,6 @@ public class Resolver
 		}
 	}
 
-	private void visitBlockStmt(Stmt.Block stmt)
-	{
-		beginScope();
-		{
-			Resolve(stmt.Statements).IgnoreError();
-		}
-		endScope();
-	}
-
 	private void visitFunctionStmtBody(Stmt.Function stmt)
 	{
 		let enclosingFunction = m_currentFunction;
@@ -175,6 +175,16 @@ public class Resolver
 		endScope();
 
 		m_currentFunction = enclosingFunction;
+	}
+
+
+	private void visitBlockStmt(Stmt.Block stmt)
+	{
+		beginScope();
+		{
+			Resolve(stmt.Statements).IgnoreError();
+		}
+		endScope();
 	}
 
 	private void visitReturnStmt(Stmt.Return stmt)

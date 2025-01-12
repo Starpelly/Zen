@@ -1,13 +1,13 @@
 namespace Program;
 
-fun void PrintHello()
+public fun void PrintHello()
 {
 	// Comments aren't included in the output.
 
 	printf("hello from zen!\n");
 }
 
-fun void PrintMath()
+public fun void PrintMath()
 {
 	printf("Add: %i\n", Math::Add(2, 2));
 	printf("Sub: %i\n", Math::Sub(2, 2));

@@ -71,7 +71,7 @@ class Program
 
 	private const String testDir = "D:/Zen/test";
 	private const String testInputDir = $"{testDir}/src";
-	private const String testOutputDir = $"{testDir}/output/src";
+	private const String testOutputDir = $"{testDir}/build/codegen";
 
 	private static int g_filesWritten = 0;
 	private static int g_errorCount = 0;
@@ -88,11 +88,6 @@ class Program
 		let outputSrcDir = ((args.Count < 2) ? testOutputDir : args[1]);
 		let outputSrcDirProgram = Path.Combine(.. scope .(), outputSrcDir, "Program");
 
-		// Clear output dir first
-		Directory.DelTree(outputSrcDir);
-
-		Directory.CreateDirectory(outputSrcDirProgram);
-
 		ErrorManager.Init();
 
 		g_originalConsoleColor = Console.ForegroundColor;
@@ -104,11 +99,28 @@ class Program
 
 		watch.Start(); // Parsing
 
-		for (let file in Directory.EnumerateFiles(inputSrcDir))
+		let relPath = scope String();
+		void recurseFiles(StringView path)
 		{
-			let fileName = file.GetFileName(.. scope .());
-			parseFile(fileName, file.GetFilePath(.. scope .()));
+			if (path != inputSrcDir)
+			{
+				relPath.Append(Path.GetFileName(path, .. scope .()));
+				relPath.Append("/");
+			}
+
+			for (let file in Directory.EnumerateFiles(path, "*.zen"))
+			{
+				let fileName = file.GetFileName(.. scope .());
+				let relFilePath = Path.Combine(.. scope .(), relPath, fileName);
+
+				parseFile(relFilePath, file.GetFilePath(.. scope .()));
+			}
+			for (let dir in Directory.EnumerateDirectories(path))
+			{
+				recurseFiles(dir.GetFilePath(.. scope .()));
+			}
 		}
+		recurseFiles(inputSrcDir);
 
 		watch.Stop(); // Parsing
 		let parseTime = watch.Elapsed.TotalSeconds;
@@ -124,6 +136,16 @@ class Program
 				let std = scope StandardLib();
 				let zenHeader = std.WriteZenHeader(.. scope .());
 				let programFile = std.WriteProgramFile(.. scope .());
+
+				// This is quite expensive(?)
+				// There should be a smarter way of generating files.
+				// It's quite stupid to delete the whole source tree and recreate it every time.
+				{
+					// Clear output dir first
+					Directory.DelTree(outputSrcDir);
+
+					Directory.CreateDirectory(outputSrcDirProgram);
+				}
 
 				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Zen.h"), zenHeader);
 				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.c"), programFile);
@@ -200,13 +222,27 @@ class Program
 
 	private static void transpileEnvironment(CompiledFile file, ZenEnvironment env, String outputSrcDir)
 	{
-		let fileNameWOE = Path.GetFileNameWithoutExtension(file.Name, .. scope .());
+		var actualFileName = default(StringView);
+
+		let fileNameSplit = scope String(file.Name).Split('/');
+		for (let split in fileNameSplit)
+		{
+			if (!fileNameSplit.HasMore)
+			{
+				actualFileName = split;
+			}
+		}
+
+		// let fileNameWOE = Path.GetFileNameWithoutExtension(file.Name, .. scope .());
+		let fileNameWOE = scope String(file.Name)..RemoveFromEnd(4);
 
 		let outputFileH = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.h");
 		let outputFileC = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.c");
 
 		let compiler = scope Transpiler(file.Parsed.Statements, env);
 		let output = compiler.Compile(fileNameWOE);
+
+		Directory.CreateDirectory(Path.GetDirectoryPath(outputFileC, .. scope .()));
 
 		File.WriteAllText(outputFileH, output.0);
 		File.WriteAllText(outputFileC, output.1);

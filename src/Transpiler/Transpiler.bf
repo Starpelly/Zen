@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 
 using Zen.Compiler;
+using Zen.Lexer;
 using Zen.Parser;
 
 namespace Zen.Transpiler;
@@ -104,6 +105,15 @@ public class Transpiler
 	}
 
 	[Inline]
+	private static void writeNamespace(String outStr, List<Token> tokens)
+	{
+		for (let token in tokens)
+		{
+			outStr.Append(scope $"{token.Lexeme}_");
+		}
+	}
+
+	[Inline]
 	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
 	{
 		// outLexeme.AppendTabs();
@@ -189,6 +199,11 @@ public class Transpiler
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
 		}
+
+		if (let cblock = stmt as Stmt.CBlock)
+		{
+			outLexeme.Append(cblock.Body);
+		}
 	}
 
 	[Inline]
@@ -203,12 +218,16 @@ public class Transpiler
 		{
 			var callNamespace = scope $"";
 
+			/*
 			let callee = Enviornment.Get(call.Callee.Name);
 			if (callee case .Ok(let val))
 			{
 				let ns = (val.Get<ZenFunction>()).Declaration.Namespace;
 				writeNamespace(callNamespace, ns);
 			}
+			*/
+
+			writeNamespace(callNamespace, call.Namespaces);
 
 			let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
 

@@ -7,7 +7,7 @@ namespace Zen.Compiler;
 
 public class ZenEnvironment
 {
-	private readonly Dictionary<StringView, Variant> m_values = new .() ~ delete _;
+	private readonly Dictionary<String, Variant> m_values = new .() ~ DeleteDictionaryAndKeys!(_);
 
 	public ZenEnvironment Enclosing { get; }
 
@@ -33,12 +33,28 @@ public class ZenEnvironment
 
 	public void Define(StringView name, Variant value)
 	{
-		m_values[name] = value;
+		m_values[new .(name)] = value;
 	}
 
 	public Result<Variant> Get(Token name)
 	{
-		if (m_values.TryGetValue(name.Lexeme, let val))
+		if (m_values.TryGetValue(scope .(name.Lexeme), let val))
+		{
+			return .Ok(val);
+		}
+
+		if (Enclosing != null)
+		{
+			return .Ok(Enclosing.Get(name));
+		}
+
+		// Error: Undefined variable
+		return .Err;
+	}
+
+	public Result<Variant> Get(StringView name)
+	{
+		if (m_values.TryGetValue(scope .(name), let val))
 		{
 			return .Ok(val);
 		}
@@ -54,9 +70,9 @@ public class ZenEnvironment
 
 	public void Assign(Token name, Variant value)
 	{
-		if (m_values.ContainsKey(name.Lexeme))
+		if (m_values.ContainsKey(scope .(name.Lexeme)))
 		{
-			m_values[name.Lexeme] = value;
+			m_values[new .(name.Lexeme)] = value;
 			return;
 		}
 

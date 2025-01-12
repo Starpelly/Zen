@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 
 using Zen.Lexer;
@@ -22,13 +23,28 @@ public abstract class Stmt
 	{
 		public Token Name { get; }
 		public List<Token> Children { get; } ~ delete _;
-		public Self Parent { get; }
 
-		public this(Token name, List<Token> children, Self parent)
+		public this(Token name, List<Token> children)
 		{
 			this.Name = name;
 			this.Children = children;
-			this.Parent = parent;
+		}
+
+		public this(List<Token> tokens)
+		{
+			Children = new .();
+			if (tokens.Count > 0)
+			{
+				Name = tokens[0];
+				if (tokens.Count > 1)
+				{
+					for (let i < tokens.Count)
+					{
+						if (i == 0) continue;
+						Children.Add(tokens[i]);
+					}
+				}
+			}
 		}
 
 		public static bool operator == (Self a, Self b)
@@ -63,6 +79,16 @@ public abstract class Stmt
 
 			return true;
 		}
+
+		public override void ToString(String strBuffer)
+		{
+			strBuffer.Append(Name.Lexeme);
+			for (let child in Children)
+			{
+				strBuffer.Append("::");
+				strBuffer.Append(child.Lexeme);
+			}
+		}
 	}
 
 	public class Block : Stmt
@@ -82,6 +108,16 @@ public abstract class Stmt
 		public this(Expr expression)
 		{
 			this.InnerExpression = expression;
+		}
+	}
+
+	public class CBlock : Stmt
+	{
+		public String Body { get; } ~ delete _;
+
+		public this(String body)
+		{
+			this.Body = body;
 		}
 	}
 

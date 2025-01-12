@@ -20,7 +20,7 @@ public class ResolvingError : ICompilerError
 
 public class Resolver
 {
-	private ZenEnvironment m_enviornment = new .() ~ delete _;
+	private ZenEnvironment m_environment = new .() ~ delete _;
 
 	private Stmt.Namespace m_currentNamespace = null;
 	private Stmt.Function.FunctionKind m_currentFunction = .None;
@@ -39,29 +39,44 @@ public class Resolver
 
 	public Result<ZenEnvironment> Resolve(List<Stmt> statements)
 	{
+		// 1. Define types
+		resolveDefinitions(statements);
+
+		// 2. Type checking
 		for (let statement in statements)
 		{
-			resolve(statement);
+			resolveBody(statement);
 		}
 
 		if (m_hadErrors)
 			return .Err;
-		return .Ok(m_enviornment);
+		return .Ok(m_environment);
 	}
 
-	private void resolve(Stmt statement)
+	private void resolveDefinitions(List<Stmt> statements)
 	{
-		if (let @namespace = statement as Stmt.Namespace)
+		for (let statement in statements)
 		{
-			visitNamespaceStmt(@namespace);
+			if (let @namespace = statement as Stmt.Namespace)
+			{
+				visitNamespaceStmtDefinition(@namespace);
+			}
+			if (let fun = statement as Stmt.Function)
+			{
+				visitFunctionStmtDefinition(fun);
+			}
+		}
+	}
+
+	private void resolveBody(Stmt statement)
+	{
+		if (let fun = statement as Stmt.Function)
+		{
+			visitFunctionStmtBody(fun);
 		}
 		if (let block = statement as Stmt.Block)
 		{
 			visitBlockStmt(block);
-		}
-		if (let fun = statement as Stmt.Function)
-		{
-			visitFunctionStmt(fun);
 		}
 		if (let ret = statement as Stmt.Return)
 		{
@@ -85,12 +100,58 @@ public class Resolver
 		}
 	}
 
-	private void visitNamespaceStmt(Stmt.Namespace stmt)
+	private void visitNamespaceStmtDefinition(Stmt.Namespace stmt)
 	{
-		let enclosingNamespace = m_currentNamespace;
+		// let enclosingNamespace = m_currentNamespace;
 		m_currentNamespace = stmt;
 
+		let nsString = stmt.ToString(.. scope .());
+		if (m_environment.Get(nsString) case .Ok(let val))
+		{
+			// No error, this is why namespaces exist at all.
+			return;
+		}
+
+		let ns = new ZenNamespace(stmt);
+		m_environment.Define(nsString, Variant.Create(ns));
+
 		// m_currentNamespace = enclosingNamespace;
+	}
+
+	private void visitFunctionStmtDefinition(Stmt.Function stmt)
+	{
+		// Function already exists
+		// Tbh, this should be for all identifiers in a scope
+		// But we'll do this simply for now.
+
+		ZenNamespace @namespaceToAdd = null;
+		if (stmt.Namespace != null)
+		{
+			let stmtNSStr = stmt.Namespace.ToString(.. scope .());
+			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
+			{
+				@namespaceToAdd = @namespace.Get<ZenNamespace>();
+			}
+		}
+		else
+		{
+			if (m_environment.Get(stmt.Name) case .Ok(let val))
+			{
+				error(stmt.Name, "Identifier already defined");
+				return;
+			}
+		}
+
+		let fun = new ZenFunction(stmt);
+
+		if (@namespaceToAdd == null) // Global function
+		{
+			m_environment.Define(stmt.Name.Lexeme, Variant.Create(fun));
+		}
+		else
+		{
+			@namespaceToAdd.AddFunction(fun);
+		}
 	}
 
 	private void visitBlockStmt(Stmt.Block stmt)
@@ -102,26 +163,14 @@ public class Resolver
 		endScope();
 	}
 
-	private void visitFunctionStmt(Stmt.Function stmt)
+	private void visitFunctionStmtBody(Stmt.Function stmt)
 	{
-		// Function already exists
-		// Tbh, this should be for all identifiers in a scope
-		// But we'll do this simply for now.
-		if (m_enviornment.Get(stmt.Name) case .Ok(let val))
-		{
-			error(stmt.Name, "Identifier already defined");
-			return;
-		}
-
-		let fun = new ZenFunction(stmt);
-		m_enviornment.Define(stmt.Name.Lexeme, Variant.Create(fun));
-
 		let enclosingFunction = m_currentFunction;
 		m_currentFunction = stmt.Kind;
 
 		beginScope();
 		{
-			resolve(stmt.Body);
+			resolveBody(stmt.Body);
 		}
 		endScope();
 
@@ -139,8 +188,8 @@ public class Resolver
 	private void visitIfStatement(Stmt.If stmt)
 	{
 		resolve(stmt.Condition);
-		resolve(stmt.ThenBranch);
-		if (stmt.ElseBranch != null) resolve(stmt.ElseBranch);
+		resolveBody(stmt.ThenBranch);
+		if (stmt.ElseBranch != null) resolveBody(stmt.ElseBranch);
 	}
 
 	private void visitExpressionStmt(Stmt.Expression stmt)
@@ -152,54 +201,49 @@ public class Resolver
 	{
 		void existCheck()
 		{
-			if (m_enviornment.Get(expr.Callee.Name) case .Ok(let val))
+			if (expr.Callee.Name.Lexeme == "printf") return; // Temp
+
+			mixin addDefaultNamespaceToExpr()
 			{
-				let zenFunc = val.Get<ZenFunction>();
-				let zenFuncNamespace = zenFunc.Declaration.Namespace;
+				expr.Namespaces.AddFront(m_currentNamespace.Name);
+			}
 
-				let zenFuncNamespaces = scope List<Token>();
-				zenFuncNamespaces.Add(zenFuncNamespace.Name);
-				zenFuncNamespaces.AddRange(zenFuncNamespace.Children);
+			mixin notAvailableError()
+			{
+				error(expr.Callee.Name, "Function not available in namespace.");
+				return;
+			}
 
-				mixin nsError()
+			if (expr.Namespaces.Count > 0)
+			{
+				let namespaceKey = scope Stmt.Namespace(expr.Namespaces).ToString(.. scope .());
+				if (m_environment.Get(namespaceKey) case .Err)
 				{
-					error(expr.Namespaces[0], "Function not available in current namespace.");
-					return;
+					addDefaultNamespaceToExpr!();
 				}
+			}
+			else
+			{
+				addDefaultNamespaceToExpr!();
+			}
 
-				// Step 1.
-				// Compare the function we're calling's namespaces and the callee's namespaces.
-				if (!Stmt.Namespace.CompareChildrenLexeme(zenFuncNamespaces, expr.Namespaces))
+			let namespaceKey = scope Stmt.Namespace(expr.Namespaces).ToString(.. scope .());
+			if (m_environment.Get(namespaceKey) case .Ok(let val))
+			{
+				let zenNamespace = val.Get<ZenNamespace>();
+
+				if (zenNamespace.FindFunction(expr.Callee.Name.Lexeme, let zenFunc))
 				{
-					nsError!();
+					// let zenFuncNamespace = zenFunc.Declaration.Namespace;
 				}
 				else
 				{
-					return;
+					notAvailableError!();
 				}
-
-				/*
-				// Step 2.
-				// Check if we're currently in a namespace and the target function is also in a namespace.
-				if (m_currentNamespace != null && zenFuncNamespace != null)
-				{
-					let compareChildren = Stmt.Namespace.CompareChildrenLexeme(zenFuncNamespace.Children, expr.Namespaces);
-
-					// Step 3.
-					// Check if the top level namespace is the same for the curent namespace and the target function.
-					if (m_currentNamespace.Name.Lexeme == zenFuncNamespace.Name.Lexeme)
-					{
-						if (!compareChildren)
-						{
-							nsError!();
-						}
-					}
-					else
-					{
-						nsError!();
-					}
-				}
-				*/
+			}
+			else
+			{
+				notAvailableError!();
 			}
 		}
 		existCheck();

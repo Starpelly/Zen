@@ -84,6 +84,8 @@ public class Parser
 			return IfStatement();
 		if (match(.While))
 			return WhileStatement();
+		if (match(.CBlock))
+			return CBlockStatement();
 		// if (match(.Print))
 		// 	return PrintStatement();
 
@@ -126,22 +128,27 @@ public class Parser
 	{
 		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
 
-		var parentNamespace = m_currentNamespace;
+		// var parentNamespace = m_currentNamespace;
 
 		let children = new List<Token>();
-		if (!check(.Semicolon))
+
+		while (!check(.Semicolon))
 		{
-			advance();
-			repeat
+			if (match(.DoubleColon))
 			{
 				let child = consume(.Identifier, "Expected identifier.");
-			   	children.Add(child);
-			} while (match(.DoubleColon));
+				children.Add(child);
+			}
+			else
+			{
+				error(peek(), "Unexpected token.");
+				break;
+			}
 		}
 
 		consume(.Semicolon, "Expected ';' after namespace identifier.");
 
-		m_currentNamespace = new Stmt.Namespace(identity, children, parentNamespace);
+		m_currentNamespace = new Stmt.Namespace(identity, children);
 		return m_currentNamespace;
 	}
 
@@ -237,6 +244,24 @@ public class Parser
 		let body = statement();
 
 		return new Stmt.While(condition, body);
+	}
+
+	private Stmt.CBlock CBlockStatement()
+	{
+		consume(.LeftBrace, scope $"Expected '\{\' before 'cblock' body.");
+
+		let body = new String();
+
+		while (!check(.RightBrace) && !isAtEnd())
+		{
+			let next = peek();
+			advance();
+			body.Append(next.Lexeme);
+		}
+
+		consume(.RightBrace, "Expected '}' after block.");
+
+		return new Stmt.CBlock(body);
 	}
 
 	// ----------------------------------------------------------------
@@ -347,18 +372,24 @@ public class Parser
 		var expr = Primary();
 
 		List<Token> namespaces = null;
+		mixin createNamespaces()
+		{
+			if (namespaces == null)
+			{
+				namespaces = new .();
+			}
+		}
+
 		while (true)
 		{
 			if (match(.LeftParentheses))
 			{
-				if (namespaces == null)
-					namespaces = new .();
+				createNamespaces!();
 				expr = FinishCall((Expr.Variable)expr, ref namespaces);
 			}
 			else if (match(.DoubleColon))
 			{
-				if (namespaces == null)
-					namespaces = new .();
+				createNamespaces!();
 				namespaces.Add(((Expr.Variable)expr).Name);
 
 				delete expr;

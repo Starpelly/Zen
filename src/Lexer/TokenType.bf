@@ -17,7 +17,7 @@ public enum TokenType
 	// Keywords
 	And, Or, If, Else, Fun, Event, For, While, Null,
 	Print, Return, This, True, False, Var, Let,
-	Enum, Match, Struct, Switch, Namespace, Using,
+	Enum, Match, Struct, Switch, Namespace, Using, CBlock,
 
 	EOF,
 }

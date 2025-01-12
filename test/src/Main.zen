@@ -1,4 +1,4 @@
-namespace Program;
+namespace Program; // Compiler breaks without namespace. This is a bug!
 
 fun void main()
 {
@@ -14,5 +14,5 @@ fun void main()
 
 fun bool check()
 {
-	return true;
+	return false;
 }

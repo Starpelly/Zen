@@ -27,7 +27,12 @@ public class ZenNamespace
 	private readonly Self m_parent;
 	private readonly Dictionary<StringView, ZenFunction> m_functions = new .() ~ DeleteDictionaryAndValues!(_);
 
-	public String Name { get; }
+	public String Name { get; } ~ delete _;
+
+	public this(Stmt.Namespace @namespace)
+	{
+		this.Name = @namespace.ToString(.. new .());
+	}
 
 	public this(String name, Self parent, Dictionary<StringView, ZenFunction> functions)
 	{
@@ -36,13 +41,20 @@ public class ZenNamespace
 		this.m_functions = functions;
 	}
 
-	public Result<ZenFunction> FindFunction(StringView name)
+	public bool FindFunction(StringView name, out ZenFunction func)
 	{
 		if (m_functions.TryGetValue(name, let val))
 		{
-			return .Ok(val.Bind(this));
+			func = val;
+			return true;
 		}
 
-		return .Err;
+		func = null;
+		return false;
+	}
+
+	public void AddFunction(ZenFunction @function)
+	{
+		m_functions.Add(@function.Declaration.Name.Lexeme, @function);
 	}
 }

@@ -29,6 +29,7 @@ public class Tokenizer
 		("struct", .Struct),
 		("namespace", .Namespace),
 		("using", .Using),
+		("cblock", .CBlock),
 	} ~ delete _;
 
 	private readonly List<Token> m_tokens { get; } = new .();
@@ -246,7 +247,10 @@ public class Tokenizer
 		if (isAtEnd()) return false;
 		if (Source[m_current] != expected) return false;
 
-		if (advance) m_current++;
+		if (advance)
+		{
+			advance();
+		}
 		return true;
 	}
 
@@ -264,13 +268,12 @@ public class Tokenizer
 		return Source[m_current + 1];
 	}
 
-	/// Moves the character in the text forward by one.
-	private void advance()
+	/// Moves the character in the text forward by 'count'.
+	private void advance(int count = 1)
 	{
-		m_current++;
-		m_lineCol++;
-		m_lineColReal++;
-		// return Source[m_current - 1];
+		m_current += count;
+		m_lineCol += count;
+		m_lineColReal += count;
 	}
 
 	private bool isAlpha(char8 c)

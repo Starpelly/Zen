@@ -24,7 +24,6 @@ public class ZenFunction
 
 public class ZenNamespace
 {
-	private readonly Self m_parent;
 	private readonly Dictionary<StringView, ZenFunction> m_functions = new .() ~ DeleteDictionaryAndValues!(_);
 
 	public String Name { get; } ~ delete _;
@@ -34,10 +33,14 @@ public class ZenNamespace
 		this.Name = @namespace.List.NamespaceListToString(.. new .());
 	}
 
+	public this(NamespaceList list)
+	{
+		this.Name = list.NamespaceListToString(.. new .());
+	}
+
 	public this(String name, Self parent, Dictionary<StringView, ZenFunction> functions)
 	{
 		this.Name = name;
-		this.m_parent = parent;
 		this.m_functions = functions;
 	}
 

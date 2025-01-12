@@ -1,0 +1,6 @@
+namespace System::Console;
+
+public fun void WriteLine()
+{
+    printf("Hello from Zen!");
+}

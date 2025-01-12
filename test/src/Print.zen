@@ -1,4 +1,4 @@
-namespace Program;
+namespace Sandbox;
 
 public fun void PrintHello()
 {
@@ -9,9 +9,11 @@ public fun void PrintHello()
 
 public fun void PrintMath()
 {
-	printf("Add: %i\n", Math::Add(2, 2));
-	printf("Sub: %i\n", Math::Sub(2, 2));
-	printf("Mul: %i\n", Math::Mul(2, 2));
-	printf("Div: %i\n", Math::Div(2, 2));
-	printf("Mod: %i\n", Math::Mod(2, 2));
+	/*
+	printf("Add: %i\n", System::Math::Add(2, 2));
+	printf("Sub: %i\n", System::Math::Sub(2, 2));
+	printf("Mul: %i\n", System::Math::Mul(2, 2));
+	printf("Div: %i\n", System::Math::Div(2, 2));
+	printf("Mod: %i\n", System::Math::Mod(2, 2));
+	*/
 }

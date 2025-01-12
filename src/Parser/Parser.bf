@@ -75,6 +75,8 @@ public class Parser
 
 	private Stmt declaration()
 	{
+		if (match(.Using))
+			return UsingStatement();
 		if (match(.Namespace))
 			return NamespaceStatement();
 		if (match(.Fun))
@@ -92,7 +94,9 @@ public class Parser
 		if (match(.Public) || match(.Private))
 		{
 			return null;
-		}	
+		}
+		if (match(.EOF))
+			return new Stmt.EOF();
 
 		// if (match(.Print))
 		// 	return PrintStatement();
@@ -130,6 +134,16 @@ public class Parser
 
 		consume(.RightBrace, "Expected '}' after block.");
 		return statements;
+	}
+
+	private Stmt.Using UsingStatement()
+	{
+		let identity = consume(.Identifier, "Expected identifier after 'using'.");
+
+		consume(.Semicolon, "Expected ';' after using identifier.");
+
+		let @using = new Stmt.Using(identity);
+		return @using;
 	}
 
 	private Stmt.Namespace NamespaceStatement()

@@ -1,6 +1,6 @@
-// using System;
+using System;
 
-namespace Program; // Compiler breaks without namespace. This is a bug!
+namespace Sandbox; // Compiler breaks without namespace. This is a bug!
 
 public fun void Main()
 {
@@ -11,7 +11,7 @@ public fun void Main()
 
 	PrintMath();
 
-	// System::Console::WriteLine();
+	Console::WriteLine();
 
 	return 0;
 }

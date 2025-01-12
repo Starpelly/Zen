@@ -22,6 +22,7 @@ public class Resolver
 {
 	private ZenEnvironment m_environment = new .() ~ delete _;
 
+	private List<Stmt.Using> m_currentUsings = new .() ~ delete _;
 	private Stmt.Namespace m_currentNamespace = null;
 	private Stmt.Function.FunctionKind m_currentFunction = .None;
 
@@ -70,6 +71,10 @@ public class Resolver
 
 	private void resolveBody(Stmt statement)
 	{
+		if (let @using = statement as Stmt.Using)
+		{
+			visitUsingStmtBody(@using);
+		}
 		if (let @namespace = statement as Stmt.Namespace)
 		{
 			visitNamespaceStmtBody(@namespace);
@@ -94,6 +99,10 @@ public class Resolver
 		{
 			visitIfStatement(@if);
 		}
+		if (let eof = statement as Stmt.EOF)
+		{
+			visitEOFStmt(eof);
+		}
 	}
 
 	private void resolve(Expr expression)
@@ -104,20 +113,37 @@ public class Resolver
 		}
 	}
 
+	// ----------------------------------------------------------------
+	// Non-expression statements
+	// ----------------------------------------------------------------
+
+	private void visitUsingStmtBody(Stmt.Using stmt)
+	{
+		m_currentUsings.Add(stmt);
+	}
+
 	private void visitNamespaceStmtDefinition(Stmt.Namespace stmt)
 	{
 		// let enclosingNamespace = m_currentNamespace;
 		m_currentNamespace = stmt;
 
-		let nsString = stmt.List.NamespaceListToString(.. scope .());
-		if (m_environment.Get(nsString) case .Ok(let val))
+		let tempList = scope NamespaceList();
+		tempList.AddRange(stmt.List);
+		for (let nsItem in stmt.List)
 		{
-			// No error, this is why namespaces exist at all.
-			return;
+			defer tempList.PopBack();
+
+			let nsString = tempList.NamespaceListToString(.. scope .());
+			if (m_environment.Get(nsString) case .Ok(let val))
+			{
+				// No error, this is why namespaces exist at all.
+				return;
+			}
+
+			let ns = new ZenNamespace(tempList);
+			m_environment.Define(nsString, Variant.Create(ns));
 		}
 
-		let ns = new ZenNamespace(stmt);
-		m_environment.Define(nsString, Variant.Create(ns));
 
 		// m_currentNamespace = enclosingNamespace;
 	}
@@ -177,7 +203,6 @@ public class Resolver
 		m_currentFunction = enclosingFunction;
 	}
 
-
 	private void visitBlockStmt(Stmt.Block stmt)
 	{
 		beginScope();
@@ -207,34 +232,66 @@ public class Resolver
 		resolve(stmt.InnerExpression);
 	}
 
+	private void visitEOFStmt(Stmt.EOF stmt)
+	{
+		m_currentUsings.Clear();
+		m_currentNamespace = null;
+	}
+
+	// ----------------------------------------------------------------
+	// Expressions
+	// ----------------------------------------------------------------
+
 	private void visitCallExpr(Expr.Call expr)
 	{
 		void existCheck()
 		{
 			if (expr.Callee.Name.Lexeme == "printf") return; // Temp
 
-			void addDefaultNamespaceToExpr()
+			void addNamespaceToExpr(Token namespaceToken)
 			{
-				expr.Namespaces.AddFront(m_currentNamespace.Front);
+				expr.Namespaces.AddFront(namespaceToken);
 			}
 
 			mixin notAvailableError()
 			{
-				error(expr.Callee.Name, "Function not available in namespace.");
+				error(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
 				return;
 			}
 
 			if (expr.Namespaces.Count > 0)
 			{
 				let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
-				if (m_environment.Get(namespaceKey) case .Err)
+
+				var foundUsing = false;
+				var foundUsings = scope NamespaceList();
+				for (let @using in m_currentUsings)
 				{
-					addDefaultNamespaceToExpr();
+					if (foundUsing)
+					{
+						error(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{foundUsings[0].Lexeme}' and '{@using.Name.Lexeme}'.");
+						return;
+					}
+
+					if (m_environment.Get(@using.Name) case .Ok)
+					{
+						addNamespaceToExpr(@using.Name);
+						foundUsing = true;
+						foundUsings.Add(@using.Name);
+					}
+				}
+
+				if (!foundUsing)
+				{
+					if (m_environment.Get(namespaceKey) case .Err)
+					{
+						addNamespaceToExpr(m_currentNamespace.Front);
+					}
 				}
 			}
 			else
 			{
-				addDefaultNamespaceToExpr();
+				addNamespaceToExpr(m_currentNamespace.Front);
 			}
 
 			let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());

@@ -1,0 +1,6 @@
+namespace Another::Console;
+
+public fun void WriteLine()
+{
+    
+}

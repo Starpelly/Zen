@@ -19,6 +19,20 @@ public abstract class Stmt
 		}
 	}
 
+	public class EOF : Stmt
+	{
+	}
+
+	public class Using : Stmt
+	{
+		public Token Name { get; }
+
+		public this(Token name)
+		{
+			this.Name = name;
+		}
+	}
+
 	public class Namespace : Stmt
 	{
 		public NamespaceList List { get; } ~ delete _;

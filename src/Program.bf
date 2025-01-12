@@ -178,9 +178,10 @@ class Program
 		{
 			Console.WriteLine(scope $"{g_filesParsed} {(g_filesParsed > 1) ? "files" : "file" } written");
 
-			Console.WriteLine(scope $"Zen parsing time:     {parseTime.ToString(.. scope .(),   "0.000000", CultureInfo.InvariantCulture)}s");
-			Console.WriteLine(scope $"Zen compilation time: {compileTime.ToString(.. scope .(), "0.000000", CultureInfo.InvariantCulture)}s");
-			Console.WriteLine(scope $"Total build time:     {(parseTime + compileTime).ToString(.. scope .(), "0.000000", CultureInfo.InvariantCulture)}s");
+			let secondsFormat = "0.000";
+			Console.WriteLine(scope $"Zen parsing time:     {parseTime.ToString(.. scope .(),   secondsFormat, CultureInfo.InvariantCulture)}s");
+			Console.WriteLine(scope $"Zen compilation time: {compileTime.ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)}s");
+			Console.WriteLine(scope $"Total build time:     {(parseTime + compileTime).ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)}s");
 		}
 		else
 		{
@@ -192,7 +193,7 @@ class Program
 		ErrorManager.Shutdown();
 
 		let outBuildPath = scope $"{g_testDir}/build/bin/Main.exe";
-		if (buildWTCC)
+		if (buildWTCC && !g_hadErrors)
 		{
 			mixin getTCCArgs()
 			{
@@ -236,7 +237,7 @@ class Program
 			processInfo.UseShellExecute = false;
 			processInfo.SetFileName(outBuildPath);
 
-			Console.WriteLine("===============================");
+			Console.WriteLine("============================");
 			process.Start(processInfo);
 		}
 

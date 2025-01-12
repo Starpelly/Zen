@@ -1,6 +1,9 @@
 namespace System::Console;
 
-public fun void WriteLine()
+public fun void WriteLine(string text)
 {
-    printf("Hello from Zen!");
+    cembed
+    {
+        printf("%s\n", text);
+    }
 }

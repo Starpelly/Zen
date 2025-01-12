@@ -210,9 +210,9 @@ public class Transpiler
 			outLexeme.AppendLine("}");
 		}
 
-		if (let cblock = stmt as Stmt.CBlock)
+		if (let cembed = stmt as Stmt.CEmbed)
 		{
-			outLexeme.Append(cblock.Body);
+			outLexeme.Append(cembed.Body);
 		}
 	}
 

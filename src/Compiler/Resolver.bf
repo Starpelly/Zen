@@ -246,8 +246,6 @@ public class Resolver
 	{
 		void existCheck()
 		{
-			if (expr.Callee.Name.Lexeme == "printf") return; // Temp
-
 			void addNamespaceToExpr(Token namespaceToken)
 			{
 				expr.Namespaces.AddFront(namespaceToken);

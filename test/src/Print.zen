@@ -2,18 +2,11 @@ using System;
 
 namespace Sandbox;
 
-public fun void PrintHello()
-{
-	// Comments aren't included in the output.
-
-	printf("hello from zen!\n");
-}
-
 public fun void PrintMath()
 {
-	printf("Add: %i\n", Math::Add(2, 2));
-	printf("Sub: %i\n", Math::Sub(2, 2));
-	printf("Mul: %i\n", Math::Mul(2, 2));
-	printf("Div: %i\n", Math::Div(2, 2));
-	printf("Mod: %i\n", Math::Mod(2, 2));
+	Console::WriteLine("Add: %i", Math::Add(2, 2));
+	Console::WriteLine("Sub: %i", Math::Sub(2, 2));
+	Console::WriteLine("Mul: %i", Math::Mul(2, 2));
+	Console::WriteLine("Div: %i", Math::Div(2, 2));
+	Console::WriteLine("Mod: %i", Math::Mod(2, 2));
 }

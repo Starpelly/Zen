@@ -90,8 +90,8 @@ public class Parser
 			return IfStatement();
 		if (match(.While))
 			return WhileStatement();
-		if (match(.CBlock))
-			return CBlockStatement();
+		if (match(.CEmbed))
+			return CEmbedStatement();
 		if (match(.Public) || match(.Private))
 		{
 			return null;
@@ -271,22 +271,14 @@ public class Parser
 		return new Stmt.While(condition, body);
 	}
 
-	private Stmt.CBlock CBlockStatement()
+	private Stmt.CEmbed CEmbedStatement()
 	{
-		consume(.LeftBrace, scope $"Expected '\{\' before 'cblock' body.");
+		let body = new String(previous().Literal.Get<StringView>());
 
-		let body = new String();
-
-		while (!check(.RightBrace) && !isAtEnd())
-		{
-			let next = peek();
-			advance();
-			body.Append(next.Lexeme);
-		}
-
+		consume(.LeftBrace, scope $"Expected '\{\' before 'cembed' body.");
 		consume(.RightBrace, "Expected '}' after block.");
 
-		return new Stmt.CBlock(body);
+		return new Stmt.CEmbed(body);
 	}
 
 	// ----------------------------------------------------------------

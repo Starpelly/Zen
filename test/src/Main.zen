@@ -4,19 +4,20 @@ namespace Sandbox; // Compiler breaks without namespace. This is a bug!
 
 public fun void Main()
 {
-	if (check())
-	{
-		PrintHello();
-	}
+	// Console::WriteLine("Hello from Zen!");
+	print("Hello from Zen!");
 
 	PrintMath();
-
-	// Console::WriteLine();
 
 	return 0;
 }
 
+public fun void print(string text)
+{
+	Console::WriteLine(text);
+}
+
 private fun bool check()
 {
-	return false;
+	return true;
 }

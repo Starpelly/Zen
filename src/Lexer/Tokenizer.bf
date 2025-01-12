@@ -29,7 +29,7 @@ public class Tokenizer
 		("struct", .Struct),
 		("namespace", .Namespace),
 		("using", .Using),
-		("cblock", .CBlock),
+		("cembed", .CEmbed),
 		("public", .Public),
 		("private", .Private),
 	} ~ delete _;
@@ -100,9 +100,7 @@ public class Tokenizer
 				{
 					if (peek() == '\n')
 					{
-						m_line++;
-						m_lineCol = 0;
-						m_lineColReal = 0;
+						increaseLine();
 					}
 					if (match('*', true) && peek() == '/')
 					{
@@ -142,9 +140,7 @@ public class Tokenizer
 			break;
 
 		case '\n':
-			m_line++;
-			m_lineCol = 0;
-			m_lineColReal = 0;
+			increaseLine();
 			break;
 
 		case '"': scanString(); break;
@@ -174,14 +170,19 @@ public class Tokenizer
 	private void addToken(TokenType type, Variant literal)
 	{
 		let text = substring(m_start, m_current);
-		m_tokens.Add(.(type, literal, text, m_fileIndex, m_line, m_lineCol - (m_current - m_start), m_lineColReal - (m_current - m_start)));
+		addToken(type, text, literal);
+	}
+
+	private void addToken(TokenType type, StringView lexeme, Variant literal)
+	{
+		m_tokens.Add(.(type, literal, lexeme, m_fileIndex, m_line, m_lineCol - (m_current - m_start), m_lineColReal - (m_current - m_start)));
 	}
 
 	private void scanString()
 	{
 		while (peek() != '"' && !isAtEnd())
 		{
-			if (peek() == '\n') m_line++;
+			if (peek() == '\n') increaseLine();
 			advance();
 		}
 
@@ -225,6 +226,49 @@ public class Tokenizer
 		addToken(.Integer, Variant.Create<int>(literal));
 	}
 
+	private void scanCEmbed()
+	{
+
+		// Opening '{', we'll assume there is one for now.
+		while (peek() != '{' && !isAtEnd())
+		{
+			if (peek() == '\n') increaseLine();
+			advance();
+		}
+		advance();
+
+		if (isAtEnd())
+		{
+			// Un-terminated cembed
+			// Lexer error here.
+			return;
+		}
+
+		m_start = m_current;
+
+		while (peek() != '}' && !isAtEnd())
+		{
+			if (peek() == '\n') increaseLine();
+			advance();
+		}
+
+		if (isAtEnd())
+		{
+			// Un-terminated cembed
+			// Lexer error here.
+			return;
+		}
+
+		// Closing '{'
+		advance();
+
+		// Trim the surrounding quotes.
+		let value = substring(m_start + 1, m_current - 1);
+		addToken(.CEmbed, "cembed", Variant.Create<StringView>(value));
+		addToken(.LeftBrace);
+		addToken(.RightBrace);
+	}
+
 	private void scanIdentifier()
 	{
 		while (isAlphaNumeric(peek()))
@@ -236,7 +280,14 @@ public class Tokenizer
 
 		if (KeywordsMap.TryGetValue(scope .(text), let type))
 		{
-			addToken(type);
+			if (type == .CEmbed)
+			{
+				scanCEmbed();
+			}
+			else
+			{
+				addToken(type);
+			}
 		}
 		else
 		{
@@ -276,6 +327,13 @@ public class Tokenizer
 		m_current += count;
 		m_lineCol += count;
 		m_lineColReal += count;
+	}
+
+	private void increaseLine()
+	{
+		m_line++;
+		m_lineCol = 0;
+		m_lineColReal = 0;
 	}
 
 	private bool isAlpha(char8 c)

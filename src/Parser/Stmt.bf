@@ -64,7 +64,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class CBlock : Stmt
+	public class CEmbed : Stmt
 	{
 		public String Body { get; } ~ delete _;
 

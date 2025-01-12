@@ -22,7 +22,7 @@ public class Transpiler
 	}
 
 	/// 1. .h file, 2. .c file
-	public (String, String) Compile(String fileName)
+	public (String, String) Compile(String fileName, String fullFileName)
 	{
 		m_outputH.AppendBannerAutogen();
 		m_outputH.AppendEmptyLine();
@@ -75,7 +75,16 @@ public class Transpiler
 		m_outputC.AppendBannerAutogen();
 		m_outputC.AppendEmptyLine();
 
-		m_outputC.AppendLine("#include \"../Zen.h\"");
+		var zenHeaderPath = scope String();
+		zenHeaderPath.Append('"');
+		for (let i in fullFileName.Split('/'))
+		{
+			zenHeaderPath.Append("../");
+		}
+		zenHeaderPath.Append("Zen.h");
+		zenHeaderPath.Append('"');
+
+		m_outputC.AppendLine(scope $"#include {zenHeaderPath}");
 		m_outputC.AppendEmptyLine();
 
 		m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");

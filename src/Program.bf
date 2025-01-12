@@ -69,23 +69,30 @@ class Program
 		}
 	}
 
-	private const String testDir = "D:/Zen/test";
-	private const String testInputDir = $"{testDir}/src";
-	private const String testOutputDir = $"{testDir}/build/codegen";
+	private const String g_testDir = "D:/Zen/test";
+	private const String g_testInputDir = $"{g_testDir}/src";
+	private const String g_testOutputDir = $"{g_testDir}/build/codegen";
+	private const String g_testTCCExePath = $"{g_testDir}/tcc/tcc.exe";
 
-	private static int g_filesWritten = 0;
+	private static int g_filesParsed = 0;
 	private static int g_errorCount = 0;
 	private static bool g_hadErrors = false;
 
-	private static List<CompiledFile> g_files = new .() ~ DeleteContainerAndItems!(_);
+	private static List<CompiledFile> g_parsedFiles = new .() ~ DeleteContainerAndItems!(_);
 	private static List<Stmt> g_statements = new .() ~ delete _;
+
+	private static List<String> g_writtenFiles = new .() ~ DeleteContainerAndItems!(_);
 
 	private static ConsoleColor g_originalConsoleColor;
 
 	public static int Main(String[] args)
 	{
-		let inputSrcDir = (args.Count == 0) ? testInputDir : args[0];
-		let outputSrcDir = ((args.Count < 2) ? testOutputDir : args[1]);
+		// Arguments
+		let inputSrcDir 	= (args.Count > 0) ? args[0] : g_testInputDir;
+		let outputSrcDir 	= (args.Count > 1) ? args[1] : g_testOutputDir;
+		let buildWTCC 		= (args.Count > 2) ? args[2] == "-tcc" : false;
+		let runAfterTCC		= (args.Count > 3) ? args[3] == "-r"   : false;
+
 		let outputSrcDirProgram = Path.Combine(.. scope .(), outputSrcDir, "Program");
 
 		ErrorManager.Init();
@@ -150,7 +157,7 @@ class Program
 				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Zen.h"), zenHeader);
 				File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.c"), programFile);
 
-				for (let file in g_files)
+				for (let file in g_parsedFiles)
 				{
 					transpileEnvironment(file, resolvedEnv, outputSrcDirProgram);
 				}
@@ -169,7 +176,7 @@ class Program
 
 		if (!g_hadErrors)
 		{
-			Console.WriteLine(scope $"{g_filesWritten} {(g_filesWritten > 1) ? "files" : "file" } written");
+			Console.WriteLine(scope $"{g_filesParsed} {(g_filesParsed > 1) ? "files" : "file" } written");
 
 			Console.WriteLine(scope $"Zen parsing time:     {parseTime.ToString(.. scope .(),   "0.000000", CultureInfo.InvariantCulture)}s");
 			Console.WriteLine(scope $"Zen compilation time: {compileTime.ToString(.. scope .(), "0.000000", CultureInfo.InvariantCulture)}s");
@@ -184,6 +191,55 @@ class Program
 
 		ErrorManager.Shutdown();
 
+		let outBuildPath = scope $"{g_testDir}/build/bin/Main.exe";
+		if (buildWTCC)
+		{
+			mixin getTCCArgs()
+			{
+				let tccArgs = scope::String();
+				for (let file in g_writtenFiles)
+				{
+					tccArgs.Append(file);
+					tccArgs.Append(" ");
+				}
+				tccArgs.Append("-g -w ");
+				tccArgs.Append(scope $"-o {outBuildPath}");
+
+				tccArgs
+			}
+
+			let process = scope SpawnedProcess();
+			let processInfo = scope ProcessStartInfo();
+
+			processInfo.CreateNoWindow = false;
+			processInfo.UseShellExecute = false;
+			processInfo.RedirectStandardOutput = false;
+
+			processInfo.SetFileName(g_testTCCExePath);
+			processInfo.SetArguments(getTCCArgs!());
+
+			process.Start(processInfo);
+
+			// Wait until tcc finishes
+			while (!process.HasExited) {}
+
+			if (process.ExitCode != 0)
+			{
+				g_hadErrors = true;
+			}
+		}
+		if (runAfterTCC && !g_hadErrors)
+		{
+			let process = scope SpawnedProcess();
+			let processInfo = scope ProcessStartInfo();
+
+			processInfo.UseShellExecute = false;
+			processInfo.SetFileName(outBuildPath);
+
+			Console.WriteLine("===============================");
+			process.Start(processInfo);
+		}
+
 		return (g_hadErrors) ? 1 : 0;
 	}
 
@@ -194,11 +250,11 @@ class Program
 		{
 			let newFile = new CompiledFile(new .(fileName));
 
-			g_files.Add(newFile);
-			g_filesWritten++;
+			g_parsedFiles.Add(newFile);
+			g_filesParsed++;
 
 			// Tokenize file
-			let tokenizer = scope Tokenizer(text, g_files.Count - 1);
+			let tokenizer = scope Tokenizer(text, g_parsedFiles.Count - 1);
 			let tokens = tokenizer.ScanTokens();
 
 			newFile.SetLexed(new .(text, tokens));
@@ -234,23 +290,26 @@ class Program
 		}
 
 		// let fileNameWOE = Path.GetFileNameWithoutExtension(file.Name, .. scope .());
-		let fileNameWOE = scope String(file.Name)..RemoveFromEnd(4);
+		let fileNameWOE = scope String(actualFileName)..RemoveFromEnd(4);
+		let fullFileNameWOE = scope String(file.Name)..RemoveFromEnd(4);
 
-		let outputFileH = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.h");
-		let outputFileC = Path.Combine(.. scope .(), outputSrcDir, scope $"{fileNameWOE}.c");
+		let outputFileH = Path.Combine(.. scope .(), outputSrcDir, scope $"{fullFileNameWOE}.h");
+		let outputFileC = Path.Combine(.. scope .(), outputSrcDir, scope $"{fullFileNameWOE}.c");
 
 		let compiler = scope Transpiler(file.Parsed.Statements, env);
-		let output = compiler.Compile(fileNameWOE);
+		let output = compiler.Compile(fileNameWOE, fullFileNameWOE);
 
 		Directory.CreateDirectory(Path.GetDirectoryPath(outputFileC, .. scope .()));
 
 		File.WriteAllText(outputFileH, output.0);
 		File.WriteAllText(outputFileC, output.1);
+
+		g_writtenFiles.Add(new .(outputFileC..Replace('\\', '/')));
 	}
 
 	private static void writeError(ConsoleColor originalConsoleColor, ICompilerError error)
 	{
-		ErrorManager.WriteError(g_files[error.Token.File], error);
+		ErrorManager.WriteError(g_parsedFiles[error.Token.File], error);
 
 		++g_errorCount;
 		g_hadErrors = true;

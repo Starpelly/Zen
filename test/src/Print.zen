@@ -1,6 +1,6 @@
 using System;
 
-namespace Sandbox;
+namespace Sandbox; // Compiler breaks without namespace. This is a bug!
 
 public fun void PrintMath()
 {

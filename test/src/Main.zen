@@ -1,6 +1,6 @@
 using System;
 
-namespace Sandbox; // Compiler breaks without namespace. This is a bug!
+namespace Sandbox;
 
 public struct Vector2
 {
@@ -23,7 +23,7 @@ public fun void Main()
 	let string constant = "Hello from Zen"; // Immutable variable, the value cannot be changed.
 	var int mutable = 0;					// Mutable variable, the value can be changed.
 	
-	// constant = "what";
+	constant = "what";
 
 	Console::WriteLine(constant);
 }

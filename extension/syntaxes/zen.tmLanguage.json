@@ -20,7 +20,6 @@
 		{
 			"include": "#types"
 		},
-
 		{
 			"include": "#preprocessor-rule-conditional"
         },
@@ -79,27 +78,20 @@
 		"numbers": {
 			"patterns": [
 			  {
-				"name": "constant.numeric.customlang",
-				"match": "\\b\\d+\\b"
-			  }
-			]
-		},
-		"functions": {
-			"patterns": [
-			  {
-				"name": "support.function.customlang",
-				"match": "\\b(dsddsasdsasdsadsdsd)\\b"
+				"name": "constant.numeric.zen",
+				"match": "\\b\\d+(\\.\\d+)?\\b"
 			  }
 			]
 		},
 		"types": {
 			"patterns": [
 			  {
-				"name": "support.type.customlang",
-				"match": "\\b(int|float|void|string|bool)\\b"
+				"name": "storage.type.zen",
+				"match": "\\b(int|float|void|string|string_view|bool)\\b"
 			  }
 			]
 		}
 	},
-	"scopeName": "source.zen"
+	"scopeName": "source.zen",
+	"fileTypes": ["zen"]
 }

@@ -1,7 +1,7 @@
 {
   "name": "zen-language",
   "displayName": "Zen Language",
-  "description": "The Zen programming language",
+  "description": "The Zen scripting language",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.90.0"

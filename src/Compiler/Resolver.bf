@@ -33,7 +33,7 @@ public class Resolver
 
 	public readonly List<ResolvingError> Errors => m_errors;
 
-	private void error(Token token, String message)
+	private void reportError(Token token, String message)
 	{
 		// Log error here.
 		m_hadErrors = true;
@@ -132,7 +132,7 @@ public class Resolver
 		let @scope = m_scopes.Back;
 		if (!@scope.ContainsKey(token.Lexeme))
 		{
-			error(token, scope $"Identifier '{token.Lexeme}' not found.");
+			reportError(token, scope $"Identifier '{token.Lexeme}' not found.");
 			return false;
 		}
 		return true;
@@ -211,7 +211,7 @@ public class Resolver
 		{
 			if (m_environment.Get(stmt.Name) case .Ok(let val))
 			{
-				error(stmt.Name, "Identifier already defined");
+				reportError(stmt.Name, "Identifier already defined");
 				return;
 			}
 		}
@@ -258,13 +258,22 @@ public class Resolver
 		let @scope = m_scopes.Back;
 		if (@scope.ContainsKey(stmt.Name.Lexeme))
 		{
-			error(stmt.Name, scope $"An identifier named '{stmt.Name.Lexeme}' has already been declared in this scope.");
+			reportError(stmt.Name, scope $"An identifier named '{stmt.Name.Lexeme}' has already been declared in this scope.");
 		}
 
 		let initType = (Expr.Literal)stmt.Initializer;
 		if (stmt.Type != initType.Type)
 		{
-			error(stmt.Name, scope $"Unable to implicitly cast '{initType.Type.Name}' to '{stmt.Type.Name}'.");
+			// Temp hack fix, there needs to be a system for this.
+			if ((stmt.Type.Name == "string" && initType.Type.Name == "string_view") ||
+				(stmt.Type.Name == "string_view" && initType.Type.Name == "string"))
+			{
+					
+			}
+			else
+			{
+				reportError(stmt.Name, scope $"Unable to implicitly cast '{initType.Type.Name}' to '{stmt.Type.Name}'.");
+			}
 		}
 
 		@scope[stmt.Name.Lexeme] = stmt;
@@ -290,7 +299,7 @@ public class Resolver
 	{
 		if (m_currentFunction == null)
 		{
-			error(stmt.Keyword, "Cannot return from top-level code.");
+			reportError(stmt.Keyword, "Cannot return from top-level code.");
 			return;
 		}
 
@@ -298,7 +307,7 @@ public class Resolver
 		{
 			if (m_currentFunction.Type != returnType)
 			{
-				error(returnType.Token, scope $"Unable to cast '{returnType.Name}' to '{m_currentFunction.Type.Name}'.");
+				reportError(returnType.Token, scope $"Unable to cast '{returnType.Name}' to '{m_currentFunction.Type.Name}'.");
 			}
 		}
 	}
@@ -336,7 +345,7 @@ public class Resolver
 
 			mixin notAvailableError()
 			{
-				error(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
+				reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
 				return .Err;
 			}
 
@@ -351,7 +360,7 @@ public class Resolver
 				childNString.Append("::");
 				childNString.Append(expr.Callee.Name.Lexeme);
 
-				error(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+				reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
 				return .Err;
 			}
 
@@ -446,12 +455,12 @@ public class Resolver
 		if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
 		{
 			let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
-			error(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
+			reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
 		}
 		else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
 		{
 			let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
-			error(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
+			reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
 		}
 		else
 		{
@@ -466,14 +475,14 @@ public class Resolver
 					{
 						if (parameter.Type.Lexeme != argDef.Type.Name)
 						{
-							error(@var.Name, "Expected type doesn't match.");
+							reportError(@var.Name, "Expected type doesn't match.");
 							return;
 						}
 						resolveExpr(argument);
 					}
 					else
 					{
-						error(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
+						reportError(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
 					}
 				}
 				else
@@ -492,13 +501,13 @@ public class Resolver
 		{
 			if (!identifier.Mutable)
 			{
-				error(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
+				reportError(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
 				return;
 			}
 		}
 		else
 		{
-			error(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
+			reportError(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
 		}
 	}
 

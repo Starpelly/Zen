@@ -1,6 +1,6 @@
 namespace System::Console;
 
-public fun void WriteLine(string text)
+public fun void WriteLine(let string_view text)
 {
     cembed
     {

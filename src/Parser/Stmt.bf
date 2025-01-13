@@ -11,11 +11,13 @@ public abstract class Stmt
 	{
 		public Token Type { get; }
 		public Token Name { get; }
+		public Token Accessor { get; }
 
-		public this(Token type, Token name)
+		public this(Token type, Token name, Token accessor)
 		{
 			this.Type = type;
 			this.Name = name;
+			this.Accessor = accessor;
 		}
 	}
 

@@ -22,6 +22,7 @@ public class StandardLib
 		builder.AppendLine("#define false (!true)");
 		builder.AppendLine("#define bool _Bool");
 		builder.AppendLine("#define string const char*"); // TEMP!!!, we want them to be actual strings in the future!
+		builder.AppendLine("#define string_view const char*"); // TEMP!!!, we want them to be actual strings in the future!
 	}
 
 	public void WriteProgramFile(String outString)

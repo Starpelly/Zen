@@ -7,27 +7,27 @@ public fun void Abs()
     
 }
 
-public fun int Add(int a, int b)
+public fun int Add(let int a, let int b)
 {
 	return a + b;
 }
 
-public fun int Sub(int a, int b)
+public fun int Sub(let int a, let int b)
 {
     return a - b;
 }
 
-public fun int Mul(int a, int b)
+public fun int Mul(let int a, let int b)
 {
     return a * b;
 }
 
-public fun int Div(int a, int b)
+public fun int Div(let int a, let int b)
 {
     return a / b;
 }
 
-public fun int Mod(int a, int b)
+public fun int Mod(let int a, let int b)
 {
     return a % b;
 }

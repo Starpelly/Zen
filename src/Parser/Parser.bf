@@ -191,7 +191,7 @@ public class Parser
 			}
 			else
 			{
-				error(peek(), "Unexpected token.");
+				reportError(peek(), "Unexpected token.");
 				break;
 			}
 		}
@@ -206,7 +206,7 @@ public class Parser
 	{
 		if (past(2).Type != .Public && past(2).Type != .Private)
 		{
-			error(peek(), scope $"Expected accessor before 'fun'.");
+			reportError(peek(), scope $"Expected accessor before 'fun'.");
 		}
 
 		var kind;
@@ -226,10 +226,21 @@ public class Parser
 		{
 			repeat
 			{
+				var accessor = default(Token);
+				if (peek().Type == .Let || peek().Type == .Var)
+				{
+					accessor = peek();
+					advance();
+				}
+				else
+				{
+					reportError(peek(), "Expected parameter accessor type.");
+				}
+
 				let pType = consume(.Identifier, "Expected parameter type.");
 				let pName = consume(.Identifier, "Expected parameter name.");
 
-				parameters.Add(.(pType, pName));
+				parameters.Add(.(pType, pName, accessor));
 			} while(match(.Comma));
 		}
 
@@ -245,7 +256,7 @@ public class Parser
 	{
 		if (past(2).Type != .Public && past(2).Type != .Private)
 		{
-			error(peek(), scope $"Expected accessor before 'struct'.");
+			reportError(peek(), scope $"Expected accessor before 'struct'.");
 		}
 
 		let name = consume(.Identifier, scope $"Expected struct name.");
@@ -386,7 +397,7 @@ public class Parser
 			{
 			}
 
-			error(equals, "Invalid assignment target.");
+			reportError(equals, "Invalid assignment target.");
 		}
 
 		return expr;
@@ -565,7 +576,7 @@ public class Parser
 			return new Expr.Grouping(expr);
 		}
 
-		error(peek(), "Expected expression.");
+		reportError(peek(), "Expected expression.");
 		return null;
 	}
 
@@ -597,11 +608,11 @@ public class Parser
 			return previous();
 		}
 
-		error(peek(), message);
+		reportError(peek(), message);
 		return peek();
 	}
 
-	private void error(Token token, String message)
+	private void reportError(Token token, String message)
 	{
 		// Log error here.
 		m_hadErrors = true;

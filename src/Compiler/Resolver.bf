@@ -26,7 +26,7 @@ public class Resolver
 	private List<Dictionary<StringView, Stmt>> m_scopes = new .() ~ DeleteContainerAndItems!(_);
 
 	private Stmt.Namespace m_currentNamespace = null;
-	private Stmt.Function.FunctionKind m_currentFunction = .None;
+	private Stmt.Function m_currentFunction = null;
 
 	private readonly List<ResolvingError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
@@ -231,7 +231,7 @@ public class Resolver
 	private void visitFunctionStmtBody(Stmt.Function stmt)
 	{
 		let enclosingFunction = m_currentFunction;
-		m_currentFunction = stmt.Kind;
+		m_currentFunction = stmt;
 
 		beginScope();
 		{
@@ -258,17 +258,42 @@ public class Resolver
 		let @scope = m_scopes.Back;
 		if (@scope.ContainsKey(stmt.Name.Lexeme))
 		{
-			error(stmt.Name, scope $"A variable named '{stmt.Name.Lexeme}' has already been declared in this scope.");
+			error(stmt.Name, scope $"An identifier named '{stmt.Name.Lexeme}' has already been declared in this scope.");
 		}
 
 		@scope[stmt.Name.Lexeme] = stmt;
 	}
 
+	private Result<ASTType> GetTypeFromExpr(Expr expr)
+	{
+		if (let literal = expr as Expr.Literal)
+		{
+			return .Ok(literal.Type);
+		}
+		if (let variable = expr as Expr.Variable)
+		{
+			if (findIdentifierStmt<Stmt.Variable>(variable.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Type);
+			}
+		}
+		return .Err;
+	}
+
 	private void visitReturnStmt(Stmt.Return stmt)
 	{
-		if (m_currentFunction == .None)
+		if (m_currentFunction == null)
 		{
 			error(stmt.Keyword, "Cannot return from top-level code.");
+			return;
+		}
+
+		if (GetTypeFromExpr(stmt.Value) case .Ok(let returnType))
+		{
+			if (m_currentFunction.Type != returnType)
+			{
+				error(returnType.Token, scope $"Unable to cast '{returnType.Name}' to '{m_currentFunction.Type.Name}'.");
+			}
 		}
 	}
 
@@ -433,7 +458,7 @@ public class Resolver
 				{
 					if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
 					{
-						if (parameter.Type.Lexeme != argDef.Type.Lexeme)
+						if (parameter.Type.Lexeme != argDef.Type.Name)
 						{
 							error(@var.Name, "Expected type doesn't match.");
 							return;

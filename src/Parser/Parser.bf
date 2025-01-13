@@ -7,6 +7,34 @@ namespace Zen.Parser;
 
 typealias NamespaceList = List<Token>;
 
+public struct ASTType
+{
+	public StringView Name { get; }
+	public Token Token { get; }
+
+	public this(StringView name, Token token)
+	{
+		this.Name = name;
+		this.Token = token;
+	}
+
+	public this(Token token)
+	{
+		this.Name = token.Lexeme;
+		this.Token = token;
+	}
+
+	public static bool operator ==(Self a, Self b)
+	{
+		return a.Name == b.Name;
+	}
+
+	public static bool operator !=(Self a, Self b)
+	{
+		return !(a == b);
+	}
+}
+
 static
 {
 	public static void NamespaceListToString(this NamespaceList list, String strBuffer)
@@ -210,7 +238,7 @@ public class Parser
 
 		let body = Block();
 
-		return new .(m_currentNamespace, kind, name, type, parameters, new .(body));
+		return new .(m_currentNamespace, kind, name, .(type), parameters, new .(body));
 	}
 
 	private Stmt.Struct StructStatement()
@@ -301,7 +329,7 @@ public class Parser
 		consume(.Semicolon, "Expected ';' after variable declaration.");
 
 		// let inferredType = Token(.Integer, )
-		return new Stmt.Variable(name, type, initializer, mutable);
+		return new Stmt.Variable(name, .(type), initializer, mutable);
 	}
 
 	// ----------------------------------------------------------------
@@ -466,13 +494,35 @@ public class Parser
 
 	private Expr Primary()
 	{
-		if (match(.False)) return new Expr.Literal(Variant.Create<bool>(false));
-		if (match(.True)) return new Expr.Literal(Variant.Create<bool>(true));
-		if (match(.Null)) return new Expr.Literal(Variant.CreateFromBoxed(null));
+		mixin returnLiteral(Token prevToken, Variant value)
+		{
+			var typeName = "";
+			switch (prevToken.Type)
+			{
+			case .String:
+				typeName = "string";
+				break;
+			case .Integer:
+				typeName = "int";
+				break;
+			case .True:
+				typeName = "bool";
+				break;
+			case .False:
+				typeName = "bool";
+				break;
+			default:
+			}
+			return new Expr.Literal(.(typeName, prevToken), prevToken, prevToken.Literal);
+		}
+
+		if (match(.False)) returnLiteral!(previous(), Variant.Create<bool>(false));
+		if (match(.True)) returnLiteral!(previous(), Variant.Create<bool>(true));
+		if (match(.Null)) returnLiteral!(previous(), Variant.CreateFromBoxed(null));
 
 		if (match(.Integer, .String))
 		{
-			return new Expr.Literal(previous().Literal);
+			returnLiteral!(previous(), previous().Literal);
 		}
 
 		if (match(.Identifier))
@@ -519,7 +569,7 @@ public class Parser
 			return previous();
 		}
 
-		error(previous(), message);
+		error(peek(), message);
 		return peek();
 	}
 

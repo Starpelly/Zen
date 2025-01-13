@@ -53,7 +53,7 @@ public class Transpiler
 					}
 					funcName.Append(fun.Name.Lexeme);
 
-					m_outputH.Append(scope $"{fun.Type.Lexeme} {funcName}");
+					m_outputH.Append(scope $"{fun.Type.Name} {funcName}");
 					m_outputH.Append("(");
 					for (let param in fun.Parameters)
 					{
@@ -147,7 +147,7 @@ public class Transpiler
 				funcName.Clear();
 				funcName.Append("main");
 			}
-			outLexeme.AppendLine(scope $"{fun.Type.Lexeme} {funcName}({parameters})");
+			outLexeme.AppendLine(scope $"{fun.Type.Name} {funcName}({parameters})");
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
@@ -186,7 +186,7 @@ public class Transpiler
 				outStr.Append("const ");
 			}
 
-			outStr.Append(@var.Type.Lexeme);
+			outStr.Append(@var.Type.Name);
 			outStr.Append(' ');
 			outStr.Append(@var.Name.Lexeme);
 

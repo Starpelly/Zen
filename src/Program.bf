@@ -178,10 +178,10 @@ class Program
 		{
 			Console.WriteLine(scope $"{g_filesParsed} {(g_filesParsed > 1) ? "files" : "file" } written");
 
-			let secondsFormat = "0.000";
-			Console.WriteLine(scope $"Zen parsing time:     {parseTime.ToString(.. scope .(),   secondsFormat, CultureInfo.InvariantCulture)}s");
-			Console.WriteLine(scope $"Zen compilation time: {compileTime.ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)}s");
-			Console.WriteLine(scope $"Total build time:     {(parseTime + compileTime).ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)}s");
+			let secondsFormat = "0.00000";
+			Console.WriteLine(scope $"Parsing  time: {parseTime.ToString(.. scope .(),   secondsFormat, CultureInfo.InvariantCulture)} seconds");
+			Console.WriteLine(scope $"Compiler time: {compileTime.ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)} seconds");
+			Console.WriteLine(scope $"Total    time: {(parseTime + compileTime).ToString(.. scope .(), secondsFormat, CultureInfo.InvariantCulture)} seconds");
 		}
 		else
 		{

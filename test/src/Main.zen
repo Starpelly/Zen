@@ -7,13 +7,14 @@ public fun void Main()
 	let string constant = "Hello from Zen!!!!"; // Immutable variable, the value cannot be changed.
 	var int mutable = 0;						// Mutable variable, the value can be changed.
 	
-	mutable = 0;
 	// constant = "what";
 
 	Console::WriteLine(constant);
 }
 
-private fun bool check()
+private fun bool typeCheck()
 {
-	return true;
+	let bool returnValue = true;
+
+	return returnValue;
 }

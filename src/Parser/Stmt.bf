@@ -86,13 +86,13 @@ public abstract class Stmt
 
 		public FunctionKind Kind { get; }
 		public Token Name { get; }
-		public Token Type { get; }
+		public ASTType Type { get; }
 		public List<Parameter> Parameters { get; } ~ delete _;
 		public Block Body { get; } ~ delete _;
 
 		public Namespace Namespace { get; }
 
-		public this(Namespace @namespace, FunctionKind kind, Token name, Token type, List<Parameter> parameters, Block body)
+		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Parameter> parameters, Block body)
 		{
 			this.Namespace = @namespace;
 			this.Kind = kind;
@@ -164,13 +164,13 @@ public abstract class Stmt
 	public class Variable : Stmt
 	{
 		public Token Name { get; }
-		public Token Type { get; }
+		public ASTType Type { get; }
 		public Expr Initializer { get; } ~ delete _;
 		public bool Mutable { get; }
 
 		public bool HasInitializer => Initializer != null;
 
-		public this(Token name, Token type, Expr init, bool mutable)
+		public this(Token name, ASTType type, Expr init, bool mutable)
 		{
 			this.Name = name;
 			this.Type = type;

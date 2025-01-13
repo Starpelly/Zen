@@ -53,11 +53,27 @@ public abstract class Expr
 
 	public class Literal : Expr
 	{
+		public ASTType Type { get; }
+		public Token Token { get; }
 		public Variant Value { get; }
 
-		public this(Variant value)
+		public this(ASTType type, Token token, Variant value)
 		{
+			this.Type = type;
+			this.Token = token;
 			this.Value = value;
+		}
+
+		public String GetTypeName() // temp
+		{
+			switch (Token.Type)
+			{
+			case .String: return "string";
+			case .Integer: return "int";
+			case .Bool: return "bool";
+			default:
+			}
+			return default(String);
 		}
 	}
 

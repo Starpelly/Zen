@@ -2,10 +2,26 @@ using System;
 
 namespace Sandbox; // Compiler breaks without namespace. This is a bug!
 
+public struct Vector2
+{
+	public var float x;
+	public var float y;
+
+	public fun void SetX(let float x)
+	{
+		self.x = x;
+	}
+
+	public fun void SetY(let float y)
+	{
+		self.y = y;
+	}
+}
+
 public fun void Main()
 {
-	let string constant = "Hello from Zen!!!!"; // Immutable variable, the value cannot be changed.
-	var int mutable = 0;						// Mutable variable, the value can be changed.
+	let string constant = "Hello from Zen"; // Immutable variable, the value cannot be changed.
+	var int mutable = 0;					// Mutable variable, the value can be changed.
 	
 	// constant = "what";
 

@@ -261,6 +261,12 @@ public class Resolver
 			error(stmt.Name, scope $"An identifier named '{stmt.Name.Lexeme}' has already been declared in this scope.");
 		}
 
+		let initType = (Expr.Literal)stmt.Initializer;
+		if (stmt.Type != initType.Type)
+		{
+			error(stmt.Name, scope $"Unable to implicitly cast '{initType.Type.Name}' to '{stmt.Type.Name}'.");
+		}
+
 		@scope[stmt.Name.Lexeme] = stmt;
 	}
 

@@ -243,12 +243,37 @@ public class Parser
 
 	private Stmt.Struct StructStatement()
 	{
+		if (past(2).Type != .Public && past(2).Type != .Private)
+		{
+			error(peek(), scope $"Expected accessor before 'struct'.");
+		}
+
 		let name = consume(.Identifier, scope $"Expected struct name.");
 
-		consume(.LeftBrace, "Expected '{' after struct name.");
+		consume(.LeftBrace, "Expected '{' before struct body.");
+		var scopeDepth = 0;
 
-		let body = Block();
-		delete body;
+		while (true && !isAtEnd())
+		{
+			if (check(.LeftBrace))
+			{
+				scopeDepth++;
+			}
+			if (check(.RightBrace))
+			{
+				if (scopeDepth <= 0)
+				{
+					break;
+				}
+
+				scopeDepth--;
+			}
+
+			// statements.Add(declaration());
+			advance();
+		}
+
+		consume(.RightBrace, "Expected '}' after struct body.");
 
 		return new .(name);
 	}
@@ -502,8 +527,11 @@ public class Parser
 			case .String:
 				typeName = "string";
 				break;
-			case .Integer:
+			case .IntNumber:
 				typeName = "int";
+				break;
+			case .DoubleNumber:
+				typeName = "double";
 				break;
 			case .True:
 				typeName = "bool";
@@ -520,7 +548,7 @@ public class Parser
 		if (match(.True)) returnLiteral!(previous(), Variant.Create<bool>(true));
 		if (match(.Null)) returnLiteral!(previous(), Variant.CreateFromBoxed(null));
 
-		if (match(.Integer, .String))
+		if (match(.IntNumber, .DoubleNumber, .String))
 		{
 			returnLiteral!(previous(), previous().Literal);
 		}

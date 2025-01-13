@@ -69,7 +69,7 @@ public abstract class Expr
 			switch (Token.Type)
 			{
 			case .String: return "string";
-			case .Integer: return "int";
+			case .IntNumber: return "int";
 			case .Bool: return "bool";
 			default:
 			}

@@ -93,9 +93,11 @@ public class Parser
 		if (match(.CEmbed))
 			return CEmbedStatement();
 		if (match(.Public) || match(.Private))
-		{
 			return null;
-		}
+		if (match(.Var))
+			return VariableDeclaration(true);
+		if (match(.Let))
+			return VariableDeclaration(false);
 
 		// if (match(.Print))
 		// 	return PrintStatement();
@@ -281,6 +283,27 @@ public class Parser
 		return new Stmt.CEmbed(body);
 	}
 
+	private Stmt.Variable VariableDeclaration(bool mutable)
+	{
+		let type = consume(.Identifier, "Expected variable type.");
+		let name = consume(.Identifier, "Expected variable name.");
+
+		Expr initializer = null;
+
+		// consume(.Equal, "Implicitly typed variables must be initalized.");
+		// if (previous().Type == .Equal)
+
+		if (match(.Equal))
+		{
+			initializer = Expression();
+		}
+
+		consume(.Semicolon, "Expected ';' after variable declaration.");
+
+		// let inferredType = Token(.Integer, )
+		return new Stmt.Variable(name, type, initializer, mutable);
+	}
+
 	// ----------------------------------------------------------------
 	// Expressions
 	// ----------------------------------------------------------------
@@ -299,16 +322,16 @@ public class Parser
 			let equals = previous();
 			let value = Assignment();
 
-			/*
 			if (let varExpr = expr as Expr.Variable)
 			{
 				let name = varExpr.Name;
+				delete varExpr; // @Sus
+				return new Expr.Assign(name, value);
 			}
 
 			if (let getExpr = expr as Expr.Get)
 			{
 			}
-			*/
 
 			error(equals, "Invalid assignment target.");
 		}
@@ -496,7 +519,7 @@ public class Parser
 			return previous();
 		}
 
-		error(peek(), message);
+		error(previous(), message);
 		return peek();
 	}
 

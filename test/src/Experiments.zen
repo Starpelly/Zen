@@ -1,0 +1,8 @@
+namespace Sandbox::Experiments;
+
+/*
+public struct Vector : (int count)
+{
+	public float[count] C;
+}
+*/

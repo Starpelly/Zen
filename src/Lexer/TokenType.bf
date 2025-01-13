@@ -12,7 +12,7 @@ public enum TokenType
 	DoubleColon,
 
 	// Literals
-	Identifier, String, Integer,
+	Identifier, String, Integer, Float, Double,
 
 	// Keywords
 	And, Or, If, Else, Fun, Event, For, While, Null,

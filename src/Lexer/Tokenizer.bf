@@ -210,6 +210,8 @@ public class Tokenizer
 
 		peekWhileIsDigit!();
 
+		var type = TokenType.Integer;
+
 		// Look for a fractional part.
 		if (peek() == '.' && isDigit(peekNext()))
 		{
@@ -217,13 +219,25 @@ public class Tokenizer
 			advance();
 
 			peekWhileIsDigit!();
+
+			type = .Double;
 		}
 
 		let substring = substring(m_start, m_current);
 
-		// let literal = double.Parse(substring(m_start, m_current));
-		let literal = int.Parse(substring);
-		addToken(.Integer, Variant.Create<int>(literal));
+		switch (type)
+		{
+		case .Integer:
+			let literal = int.Parse(substring);
+			addToken(.Integer, Variant.Create<int>(literal));
+			break;
+		case .Double:
+			let literal = double.Parse(substring);
+			addToken(.Double, Variant.Create<double>(literal));
+			break;
+		default:
+		}
+
 	}
 
 	private void scanCEmbed()

@@ -160,4 +160,22 @@ public abstract class Stmt
 			this.Body = body;
 		}
 	}
+
+	public class Variable : Stmt
+	{
+		public Token Name { get; }
+		public Token Type { get; }
+		public Expr Initializer { get; } ~ delete _;
+		public bool Mutable { get; }
+
+		public bool HasInitializer => Initializer != null;
+
+		public this(Token name, Token type, Expr init, bool mutable)
+		{
+			this.Name = name;
+			this.Type = type;
+			this.Initializer = init;
+			this.Mutable = mutable;
+		}
+	}
 }

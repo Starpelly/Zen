@@ -23,6 +23,8 @@ public class Resolver
 	private ZenEnvironment m_environment = new .() ~ delete _;
 
 	private List<Stmt.Using> m_currentUsings = new .() ~ delete _;
+	private List<Dictionary<StringView, Stmt>> m_scopes = new .() ~ DeleteContainerAndItems!(_);
+
 	private Stmt.Namespace m_currentNamespace = null;
 	private Stmt.Function.FunctionKind m_currentFunction = .None;
 
@@ -46,7 +48,7 @@ public class Resolver
 		// 2. Type checking
 		for (let statement in statements)
 		{
-			resolveBody(statement);
+			resolveStmtBody(statement);
 		}
 
 		if (m_hadErrors)
@@ -69,7 +71,7 @@ public class Resolver
 		}
 	}
 
-	private void resolveBody(Stmt statement)
+	private void resolveStmtBody(Stmt statement)
 	{
 		if (let @using = statement as Stmt.Using)
 		{
@@ -86,6 +88,10 @@ public class Resolver
 		if (let block = statement as Stmt.Block)
 		{
 			visitBlockStmt(block);
+		}
+		if (let @var = statement as Stmt.Variable)
+		{
+			visitVarStmt(@var);
 		}
 		if (let ret = statement as Stmt.Return)
 		{
@@ -105,12 +111,46 @@ public class Resolver
 		}
 	}
 
-	private void resolve(Expr expression)
+	private void resolveExpr(Expr expression)
 	{
 		if (let call = expression as Expr.Call)
 		{
 			visitCallExpr(call);
 		}
+		if (let variable = expression as Expr.Variable)
+		{
+			identifierExists(variable.Name);
+		}
+		if (let assign = expression as Expr.Assign)
+		{
+			visitAssignExpr(assign);
+		}
+	}
+
+	private bool identifierExists(Token token)
+	{
+		let @scope = m_scopes.Back;
+		if (!@scope.ContainsKey(token.Lexeme))
+		{
+			error(token, scope $"Identifier '{token.Lexeme}' not found.");
+			return false;
+		}
+		return true;
+	}
+
+	private Result<T> findIdentifierStmt<T>(Token token) where T : Stmt
+	{
+		for (let i < m_scopes.Count)
+		{
+			let @scope = m_scopes[i];
+			if (@scope.ContainsKey(token.Lexeme))
+			{
+				// resolve
+				return .Ok((T)@scope[token.Lexeme]);
+			}
+		}
+
+		return .Err;
 	}
 
 	// ----------------------------------------------------------------
@@ -143,7 +183,6 @@ public class Resolver
 			let ns = new ZenNamespace(tempList);
 			m_environment.Define(nsString, Variant.Create(ns));
 		}
-
 
 		// m_currentNamespace = enclosingNamespace;
 	}
@@ -196,7 +235,7 @@ public class Resolver
 
 		beginScope();
 		{
-			resolveBody(stmt.Body);
+			resolveStmtBody(stmt.Body);
 		}
 		endScope();
 
@@ -212,6 +251,19 @@ public class Resolver
 		endScope();
 	}
 
+	private void visitVarStmt(Stmt.Variable stmt)
+	{
+		if (m_scopes.Count == 0) return;
+
+		let @scope = m_scopes.Back;
+		if (@scope.ContainsKey(stmt.Name.Lexeme))
+		{
+			error(stmt.Name, scope $"A variable named '{stmt.Name.Lexeme}' has already been declared in this scope.");
+		}
+
+		@scope[stmt.Name.Lexeme] = stmt;
+	}
+
 	private void visitReturnStmt(Stmt.Return stmt)
 	{
 		if (m_currentFunction == .None)
@@ -222,14 +274,14 @@ public class Resolver
 
 	private void visitIfStatement(Stmt.If stmt)
 	{
-		resolve(stmt.Condition);
-		resolveBody(stmt.ThenBranch);
-		if (stmt.ElseBranch != null) resolveBody(stmt.ElseBranch);
+		resolveExpr(stmt.Condition);
+		resolveStmtBody(stmt.ThenBranch);
+		if (stmt.ElseBranch != null) resolveStmtBody(stmt.ElseBranch);
 	}
 
 	private void visitExpressionStmt(Stmt.Expression stmt)
 	{
-		resolve(stmt.InnerExpression);
+		resolveExpr(stmt.InnerExpression);
 	}
 
 	private void visitEOFStmt(Stmt.EOF stmt)
@@ -244,7 +296,7 @@ public class Resolver
 
 	private void visitCallExpr(Expr.Call expr)
 	{
-		void existCheck()
+		Result<ZenFunction> existCheck()
 		{
 			void addNamespaceToExpr(Token namespaceToken)
 			{
@@ -254,7 +306,7 @@ public class Resolver
 			mixin notAvailableError()
 			{
 				error(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
-				return;
+				return .Err;
 			}
 
 			mixin ambigRefError(Token one, Token two)
@@ -269,7 +321,7 @@ public class Resolver
 				childNString.Append(expr.Callee.Name.Lexeme);
 
 				error(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
-				return;
+				return .Err;
 			}
 
 			// Check if the function we're calling is global.
@@ -279,7 +331,7 @@ public class Resolver
 
 				if (m_environment.Get(namespaceKey) case .Ok)
 				{
-					return;
+					return .Err;
 				}
 
 				var foundUsing = false;
@@ -344,6 +396,7 @@ public class Resolver
 				if (zenNamespace.FindFunction(expr.Callee.Name.Lexeme, let zenFunc))
 				{
 					// let zenFuncNamespace = zenFunc.Declaration.Namespace;
+					return .Ok(zenFunc);
 				}
 				else
 				{
@@ -355,23 +408,77 @@ public class Resolver
 				notAvailableError!();
 			}
 		}
-		existCheck();
+		let zenFunc = existCheck().Value;
 
-		resolve(expr.Callee);
+		// resolveExpr(expr.Callee);
 
-		for (let argument in expr.Arguments)
+		if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
 		{
-			resolve(argument);
+			let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
+			error(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
+		}
+		else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
+		{
+			let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
+			error(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
+		}
+		else
+		{
+			for (let i < expr.Arguments.Count)
+			{
+				let argument = expr.Arguments[i];
+				let parameter = zenFunc.Declaration.Parameters[i];
+
+				if (let @var = argument as Expr.Variable)
+				{
+					if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
+					{
+						if (parameter.Type.Lexeme != argDef.Type.Lexeme)
+						{
+							error(@var.Name, "Expected type doesn't match.");
+							return;
+						}
+						resolveExpr(argument);
+					}
+					else
+					{
+						error(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
+					}
+				}
+				else
+				{
+					// There needs to be an error here.
+					// Although, this should never be the case?
+					// Are functions variables? Probably not...
+				}
+			}
+		}
+	}
+
+	private void visitAssignExpr(Expr.Assign expr)
+	{
+		if (findIdentifierStmt<Stmt.Variable>(expr.Name) case .Ok(let identifier))
+		{
+			if (!identifier.Mutable)
+			{
+				error(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
+				return;
+			}
+		}
+		else
+		{
+			error(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
 		}
 	}
 
 	private void beginScope()
 	{
-		// m_scopes.AddFront(new .());
+		m_scopes.Add(new .());
 	}
 
 	private void endScope()
 	{
-		// m_scopes.PopBack();
+		let @scope = m_scopes.PopBack();
+		delete @scope;
 	}
 }

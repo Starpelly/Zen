@@ -176,6 +176,30 @@ public class Transpiler
 			outLexeme.AppendLine(scope $"{line};");
 		}
 
+		if (let @var = stmt as Stmt.Variable)
+		{
+			let outStr = scope String();
+			let initializerStr = expressionToString(.. scope .(), @var.Initializer);
+
+			if (!@var.Mutable)
+			{
+				outStr.Append("const ");
+			}
+
+			outStr.Append(@var.Type.Lexeme);
+			outStr.Append(' ');
+			outStr.Append(@var.Name.Lexeme);
+
+			if (@var.HasInitializer)
+			{
+				outStr.Append(" = ");
+				outStr.Append(initializerStr);
+			}
+			outStr.Append(';');
+
+			outLexeme.AppendLine(outStr);
+		}
+
 		if (let ret = stmt as Stmt.Return)
 		{
 			let lexeme = expressionToString(..scope .(), ret.Value);
@@ -281,6 +305,14 @@ public class Transpiler
 			let right = expressionToString(.. scope .(), binary.Right);
 
 			outLexeme.Append(scope $"{left} {op} {right}");
+		}
+
+		if (let assign = expr as Expr.Assign)
+		{
+			let identity = assign.Name.Lexeme;
+			let value = expressionToString(.. scope .(), assign.Value);
+
+			outLexeme.Append(scope $"{identity} = {value}");
 		}
 	}
 }

@@ -4,17 +4,13 @@ namespace Sandbox; // Compiler breaks without namespace. This is a bug!
 
 public fun void Main()
 {
-	// Console::WriteLine("Hello from Zen!");
-	print("Hello from Zen!");
+	let string constant = "Hello from Zen!!!!"; // Immutable variable, the value cannot be changed.
+	var int mutable = 0;						// Mutable variable, the value can be changed.
+	
+	mutable = 0;
+	// constant = "what";
 
-	PrintMath();
-
-	return 0;
-}
-
-public fun void print(string text)
-{
-	Console::WriteLine(text);
+	Console::WriteLine(constant);
 }
 
 private fun bool check()

@@ -104,4 +104,16 @@ public abstract class Expr
 			this.Name = name;
 		}
 	}
+
+	public class Assign : Expr
+	{
+		public Token Name { get; }
+		public Expr Value { get; } ~ delete _;
+
+		public this(Token name, Expr value)
+		{
+			this.Name = name;
+			this.Value = value;
+		}
+	}
 }

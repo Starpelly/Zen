@@ -1,0 +1,6 @@
+FileVersion = 1
+Dependencies = {corlib = "*", Zen = "*"}
+
+[Project]
+Name = "ZenLsp"
+StartupObject = "ZenLsp.Program"

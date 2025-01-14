@@ -87,7 +87,7 @@
 			"patterns": [
 			  {
 				"name": "storage.type.zen",
-				"match": "\\b(int|float|void|string|string_view|bool)\\b"
+				"match": "\\b(int|float|double|void|string|string_view|bool)\\b"
 			  }
 			]
 		}

@@ -74,6 +74,7 @@ public class Parser
 	private bool m_hadErrors = false;
 
 	private Stmt.Namespace m_currentNamespace = null;
+	private Stmt.Function m_currentFunction = null;
 
 	public readonly List<Token> Tokens { get; }
 	public readonly List<ParseError> Errors => m_errors;
@@ -204,24 +205,31 @@ public class Parser
 
 	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
 	{
-		if (past(2).Type != .Public && past(2).Type != .Private)
-		{
-			reportError(peek(), scope $"Expected accessor before 'fun'.");
-		}
-
 		var kind;
+
+		if (m_currentFunction == null)
+		{
+			if (past(2).Type != .Public && past(2).Type != .Private)
+			{
+				reportError(peek(), scope $"Expected accessor before 'fun'.");
+			}
+		}
+		else
+		{
+			kind = .LocalFunction;
+		}
 
 		let type = consume(.Identifier, scope $"Expected {kind} type.");
 		let name = consume(.Identifier, scope $"Expected {kind} name.");
 
-		if (name.Lexeme == "Main")
+		if (name.Lexeme == "Main" && kind != .LocalFunction)
 		{
 			kind = .Main;
 		}
 
 		consume(.LeftParentheses, scope $"Expected '(' after {kind} name.");
 
-		let parameters = new List<Stmt.Parameter>();
+		let parameters = new List<Stmt.Variable>();
 		if (!check(.RightParenthesis))
 		{
 			repeat
@@ -230,26 +238,34 @@ public class Parser
 				if (peek().Type == .Let || peek().Type == .Var)
 				{
 					accessor = peek();
-					advance();
 				}
 				else
 				{
 					reportError(peek(), "Expected parameter accessor type.");
 				}
+				advance();
 
 				let pType = consume(.Identifier, "Expected parameter type.");
 				let pName = consume(.Identifier, "Expected parameter name.");
 
-				parameters.Add(.(pType, pName, accessor));
+				parameters.Add(new .(pName, .(pType), null, (accessor.Type == .Var)));
 			} while(match(.Comma));
 		}
 
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		let body = Block();
+		var retFunc = new Stmt.Function(m_currentNamespace, kind, name, .(type), parameters);
 
-		return new .(m_currentNamespace, kind, name, .(type), parameters, new .(body));
+		let lastFunc = m_currentFunction;
+		m_currentFunction = retFunc;
+		{
+			let body = Block();
+			retFunc.SetBody(new .(body));
+		}
+		m_currentFunction = lastFunc;
+
+		return retFunc;
 	}
 
 	private Stmt.Struct StructStatement()

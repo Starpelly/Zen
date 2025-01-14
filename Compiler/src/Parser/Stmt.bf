@@ -7,7 +7,7 @@ namespace Zen.Parser;
 
 public abstract class Stmt
 {
-	public struct Parameter
+	public class Parameter : Stmt
 	{
 		public Token Type { get; }
 		public Token Name { get; }
@@ -83,24 +83,39 @@ public abstract class Stmt
 			None,
 			Main,
 			Function,
+			LocalFunction,
 			Event
 		}
 
 		public FunctionKind Kind { get; }
 		public Token Name { get; }
 		public ASTType Type { get; }
-		public List<Parameter> Parameters { get; } ~ delete _;
-		public Block Body { get; } ~ delete _;
+		public List<Variable> Parameters { get; } ~ DeleteContainerAndItems!(_);
+		public Block Body { get; private set; } ~ delete _;
 
 		public Namespace Namespace { get; }
 
-		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Parameter> parameters, Block body)
+		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Block body)
 		{
 			this.Namespace = @namespace;
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
 			this.Parameters = parameters;
+			this.Body = body;
+		}
+
+		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Variable> parameters)
+		{
+			this.Namespace = @namespace;
+			this.Kind = kind;
+			this.Name = name;
+			this.Type = type;
+			this.Parameters = parameters;
+		}
+
+		public void SetBody(Block body)
+		{
 			this.Body = body;
 		}
 	}
@@ -172,11 +187,11 @@ public abstract class Stmt
 
 		public bool HasInitializer => Initializer != null;
 
-		public this(Token name, ASTType type, Expr init, bool mutable)
+		public this(Token name, ASTType type, Expr initializer, bool mutable)
 		{
 			this.Name = name;
 			this.Type = type;
-			this.Initializer = init;
+			this.Initializer = initializer;
 			this.Mutable = mutable;
 		}
 	}

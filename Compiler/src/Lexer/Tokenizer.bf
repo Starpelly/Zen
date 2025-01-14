@@ -164,7 +164,20 @@ public class Tokenizer
 
 	private void addToken(TokenType type)
 	{
-		addToken(type, Variant.Create<int>(0));
+		Variant getValue()
+		{
+			switch (type)
+			{
+			case .True:
+				return Variant.Create<bool>(true);
+			case .False:
+				return Variant.Create<bool>(false);
+			default:
+				return Variant.Create<Object>(null);
+			}
+		}
+
+		addToken(type, getValue());
 	}
 
 	private void addToken(TokenType type, Variant literal)

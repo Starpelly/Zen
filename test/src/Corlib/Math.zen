@@ -1,11 +1,7 @@
 namespace System::Math;
 
-// public const double PI = 3.14159265358979323846;
-
-public fun void Abs()
-{
-    
-}
+public let double PI = 3.14159265358979323846;
+public let double E  = 2.7182818284590452354;
 
 public fun int Add(let int a, let int b)
 {

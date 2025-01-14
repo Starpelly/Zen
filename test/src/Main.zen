@@ -2,16 +2,43 @@ using System;
 
 namespace Sandbox;
 
-public fun void Main()
+cembed
 {
-	let string_view constant = "Hello from Zen!!!"; // Immutable variable, the value cannot be changed.
-	var int mutable = 0;						 // Mutable variable, the value can be changed.
-
-	Console::WriteLine(constant);
+	#include <stdio.h>
 }
 
-private fun bool typeCheck(let bool t)
+public fun void Main()
+{
+	let string_view constant = "Hello from Zen!!!";
+	var int mutable = 0;
+	let bool boolean = false;
+
+	Console::WriteLine(constant);
+
+	let bool typeChecker = typeCheck(true);
+	/*
+	cembed
+	{
+		printf("%i",)
+	}
+	*/
+}
+
+private fun bool typeCheck(let bool print)
 {
 	let bool returnValue = true;
+
+	// print = false;
+	if (print)
+	{
+		let string_view soTrue = "This is fucking true bro!!!!";
+		Console::WriteLine(soTrue);
+	}
+
+	cembed
+	{
+		printf("%s\n", (print) ? "true" : "false");
+	}
+
 	return returnValue;
 }

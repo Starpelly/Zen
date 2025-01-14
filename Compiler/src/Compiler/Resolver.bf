@@ -156,7 +156,7 @@ public class Resolver
 		}
 		if (let variable = expression as Expr.Variable)
 		{
-			identifierExists(variable.Name);
+			visitVariableExpr(variable);
 		}
 		if (let assign = expression as Expr.Assign)
 		{
@@ -166,13 +166,16 @@ public class Resolver
 
 	private bool identifierExists(Token token)
 	{
-		let @scope = m_scopes.Back;
-		if (!@scope.ContainsKey(token.Lexeme))
+		for (let i < m_scopes.Count)
 		{
-			ThrowError(.IDENTIFIER_NOT_FOUND, token);
-			return false;
+			let @scope = m_scopes[i];
+			if (@scope.ContainsKey(token.Lexeme))
+			{
+				return true;
+			}
 		}
-		return true;
+		ThrowError(.IDENTIFIER_NOT_FOUND, token);
+		return false;
 	}
 
 	private Result<T> findIdentifierStmt<T>(Token token) where T : Stmt
@@ -188,6 +191,42 @@ public class Resolver
 		}
 
 		return .Err;
+	}
+
+	private void addIdentifierToBackScope(Token token, Stmt stmt)
+	{
+		let @scope = m_scopes.Back;
+		if (@scope.ContainsKey(token.Lexeme))
+		{
+			ThrowError(.IDENTIFIER_ALREADY_DEFINED_SCOPE, token);
+		}
+		@scope[token.Lexeme] = stmt;
+	}
+
+	/// Compares two types to see if type 'b' can be implicitly casted to type 'a'.
+	/// This does NOT check the inverse!
+	private void compareAndCheckTypes(Expr expr, ASTType a, ASTType b)
+	{
+		if (b != a)
+		{
+			if (let literal = expr as Expr.Literal)
+			{
+				// Temp hack fix, there needs to be a system for this.
+				if ((a.Name == "string" && literal.Type.Name == "string_view") ||
+					(a.Name == "string_view" && literal.Type.Name == "string"))
+				{
+							
+				}
+				else
+				{
+					ThrowError(.IMPLICIT_CAST_INVALID, a.Token, literal.Type.Name, a.Name);
+				}
+			}
+			else if (let call = expr as Expr.Call)
+			{
+	
+			}
+		}
 	}
 
 	// ----------------------------------------------------------------
@@ -272,6 +311,11 @@ public class Resolver
 
 		beginScope();
 		{
+			for (let param in stmt.Parameters)
+			{
+				addIdentifierToBackScope(param.Name, param);
+			}
+
 			resolveStmtBody(stmt.Body);
 		}
 		endScope();
@@ -292,28 +336,15 @@ public class Resolver
 	{
 		if (m_scopes.Count == 0) return;
 
-		let @scope = m_scopes.Back;
-		if (@scope.ContainsKey(stmt.Name.Lexeme))
+		addIdentifierToBackScope(stmt.Name, stmt);
+
+		if (GetTypeFromExpr(stmt.Initializer) case .Ok(let typeB))
 		{
-			ThrowError(.IDENTIFIER_ALREADY_DEFINED_SCOPE, stmt.Name);
+			compareAndCheckTypes(stmt.Initializer, stmt.Type, typeB);
 		}
 
-		let initType = (Expr.Literal)stmt.Initializer;
-		if (stmt.Type != initType.Type)
-		{
-			// Temp hack fix, there needs to be a system for this.
-			if ((stmt.Type.Name == "string" && initType.Type.Name == "string_view") ||
-				(stmt.Type.Name == "string_view" && initType.Type.Name == "string"))
-			{
-					
-			}
-			else
-			{
-				ThrowError(.IMPLICIT_CAST_INVALID, stmt.Name, initType.Type.Name, stmt.Type.Name);
-			}
-		}
-
-		@scope[stmt.Name.Lexeme] = stmt;
+		if (stmt.HasInitializer)
+			resolveExpr(stmt.Initializer);
 	}
 
 	private Result<ASTType> GetTypeFromExpr(Expr expr)
@@ -325,6 +356,13 @@ public class Resolver
 		if (let variable = expr as Expr.Variable)
 		{
 			if (findIdentifierStmt<Stmt.Variable>(variable.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Type);
+			}
+		}
+		if (let call = expr as Expr.Call)
+		{
+			if (findIdentifierStmt<Stmt.Function>(call.Callee.Name) case .Ok(let ret))
 			{
 				return .Ok(ret.Type);
 			}
@@ -514,9 +552,9 @@ public class Resolver
 				{
 					if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
 					{
-						if (parameter.Type.Lexeme != argDef.Type.Name)
+						if (parameter.Type.Name != argDef.Type.Name)
 						{
-							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Lexeme);
+							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Name);
 							return;
 						}
 						resolveExpr(argument);
@@ -528,9 +566,9 @@ public class Resolver
 				}
 				else if (let literal = argument as Expr.Literal)
 				{
-					if (parameter.Type.Lexeme != literal.Type.Name)
+					if (parameter.Type.Name != literal.Type.Name)
 					{
-						ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Lexeme);
+						ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
 					}
 				}
 				else
@@ -543,6 +581,11 @@ public class Resolver
 		}
 	}
 
+	private void visitVariableExpr(Expr.Variable expr)
+	{
+		identifierExists(expr.Name);
+	}
+
 	private void visitAssignExpr(Expr.Assign expr)
 	{
 		if (findIdentifierStmt<Stmt.Variable>(expr.Name) case .Ok(let identifier))
@@ -550,15 +593,20 @@ public class Resolver
 			if (!identifier.Mutable)
 			{
 				ThrowError(.VARIABLE_ASSIGNMENT_IMMUTABLE, expr.Name, identifier.Name.Lexeme);
-				// reportError(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
 				return;
+			}
+
+			if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
+			{
+				compareAndCheckTypes(expr.Value, identifier.Type, typeB);
 			}
 		}
 		else
 		{
 			ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
-			// reportError(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
 		}
+
+		resolveExpr(expr.Value);
 	}
 
 	private void beginScope()

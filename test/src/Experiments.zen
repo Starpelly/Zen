@@ -9,7 +9,6 @@ public struct Vector : (int count)
 }
 */
 
-/*
 public struct Vector2
 {
 	public var float x;
@@ -25,7 +24,6 @@ public struct Vector2
 		self.y = y;
 	}
 }
-*/
 
 /*
 public enum Hello

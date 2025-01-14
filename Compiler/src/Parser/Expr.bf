@@ -7,6 +7,11 @@ namespace Zen.Parser;
 
 public abstract class Expr
 {
+	public interface IHasType
+	{
+		public abstract ASTType GetType();
+	}
+
 	public class Binary : Expr
 	{
 		public Expr Left { get; } ~ delete _;

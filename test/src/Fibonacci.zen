@@ -1,0 +1,21 @@
+using System;
+
+namespace Sandbox;
+
+/*
+public fun int Fibonacci()
+{
+    var int a = 0;
+    var int b = 1;
+
+    fun int fib()
+    {
+        let int c = a;
+        a = b;
+        b = a + c;
+        return c;    
+    }
+
+    return fib();
+}
+*/

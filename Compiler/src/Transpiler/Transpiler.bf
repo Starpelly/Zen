@@ -57,12 +57,24 @@ public class Transpiler
 					m_outputH.Append("(");
 					for (let param in fun.Parameters)
 					{
-						m_outputH.Append(scope $"{param.Type.Lexeme} {param.Name.Lexeme}");
+						m_outputH.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
 						if (param != fun.Parameters.Back)
 							m_outputH.Append(", ");
 					}
 					m_outputH.Append(");");
 					m_outputH.AppendEmptyLine();
+
+					// Shitty code to check for local functions because C doesn't support local functions...
+					for (let bodyStatement in fun.Body.Statements)
+					{
+						if (let localFun = bodyStatement as Stmt.Function)
+						{
+							if (localFun.Kind == .LocalFunction)
+							{
+								m_outputH.AppendLine(scope $"{localFun.Type.Name} {funcName}_{localFun.Name.Lexeme}();");
+							}
+						}
+					}
 				}
 				else if (statement.GetType() == typeof(Stmt.Struct))
 				{
@@ -129,7 +141,12 @@ public class Transpiler
 
 			for (let param in fun.Parameters)
 			{
-				parameters.Append(scope $"{param.Type.Lexeme} {param.Name.Lexeme}");
+				if (!param.Mutable)
+				{
+					parameters.Append("const ");
+				}
+
+				parameters.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
 				if (param != fun.Parameters.Back)
 					parameters.Append(", ");
 			}
@@ -236,7 +253,16 @@ public class Transpiler
 
 		if (let cembed = stmt as Stmt.CEmbed)
 		{
-			outLexeme.Append(cembed.Body);
+			let bodyText = cembed.Body;
+			for (let line in bodyText.Split('\n'))
+			{
+				var outLine = line;
+				outLine.TrimEnd('\n');
+				outLine.TrimStart();
+
+				if (outLine.IsWhiteSpace || outLine.IsNull || outLine.IsEmpty) continue;
+			   	outLexeme.AppendLine(outLine);
+			}
 		}
 	}
 
@@ -250,18 +276,7 @@ public class Transpiler
 
 		if (let call = expr as Expr.Call)
 		{
-			var callNamespace = scope $"";
-
-			/*
-			let callee = Enviornment.Get(call.Callee.Name);
-			if (callee case .Ok(let val))
-			{
-				let ns = (val.Get<ZenFunction>()).Declaration.Namespace;
-				writeNamespace(callNamespace, ns);
-			}
-			*/
-
-			writeNamespace(callNamespace, call.Namespaces);
+			let callNamespace = writeNamespace(.. scope .(), call.Namespaces);
 
 			let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
 
@@ -285,6 +300,9 @@ public class Transpiler
 			case typeof(int):
 				outLexeme.Append(literal.Value.Get<int>());
 				break;
+			case typeof(double):
+				outLexeme.Append(literal.Value.Get<double>());
+				break;
 			case typeof(bool):
 				outLexeme.Append(literal.Value.Get<bool>() ? "true" : "false");
 				break;
@@ -295,6 +313,8 @@ public class Transpiler
 				str.Append('"');
 				outLexeme.Append(str);
 				break;
+			default:
+				Runtime.FatalError(scope $"Unknown literal case ({literal.Value.VariantType}).");
 			}
 		}
 

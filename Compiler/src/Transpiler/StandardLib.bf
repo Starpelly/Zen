@@ -15,7 +15,7 @@ public class StandardLib
 		builder.AppendLine("#pragma once");
 		builder.AppendEmptyLine();
 
-		builder.AppendLine("#include <stdio.h>");
+		// builder.AppendLine("#include <stdio.h>");
 		builder.AppendEmptyLine();
 
 		builder.AppendLine("#define true  (1 == 1)");

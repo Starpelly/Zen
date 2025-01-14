@@ -19,12 +19,12 @@ public class CodeBuilder
 		m_tabCount--;
 	}
 
-	public void Append(String text)
+	public void Append(StringView text)
 	{
 		m_code.Append(text);
 	}
 
-	public void AppendLine(String text)
+	public void AppendLine(StringView text)
 	{
 		AppendTabs();
 		m_code.Append(text);

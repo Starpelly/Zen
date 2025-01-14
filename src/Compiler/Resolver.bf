@@ -11,7 +11,7 @@ public class ResolvingError : ICompilerError
 	public Token Token { get; }
 	public String Message { get; } ~ delete _;
 
-	public this(Token token, String message)
+	public this(Token token, StringView message)
 	{
 		this.Token = token;
 		this.Message = new .(message);
@@ -33,11 +33,48 @@ public class Resolver
 
 	public readonly List<ResolvingError> Errors => m_errors;
 
-	private void reportError(Token token, String message)
+	public void ThrowError(ErrorCode code, Token token, params Object[] args)
 	{
-		// Log error here.
+		mixin simpleError(StringView message)
+		{
+			m_errors.Add(new .(token, message));
+		}
+
 		m_hadErrors = true;
-		m_errors.Add(new .(token, message));
+		switch (code)
+		{
+		case .VARIABLE_ASSIGNMENT_IMMUTABLE:
+			simpleError!(scope $"Variable '{args[0]}' is immutable and cannot be assigned to.");
+			break;
+
+		case .RETURN_TOP_LEVEL:
+			simpleError!("Cannot return from top-level code.");
+			break;
+
+		case .IDENTIFIER_NOT_FOUND:
+			simpleError!(scope $"Identifier '{token.Lexeme}' not found.");
+			break;
+		case .IDENTIFIER_ALREADY_DEFINED:
+			simpleError!(scope $"Identifier already defined.");
+			break;
+		case .IDENTIFIER_ALREADY_DEFINED_SCOPE:
+			simpleError!(scope $"An identifier named '{token.Lexeme}' has already been declared in this scope.");
+			break;
+		case .IDENTIFIER_AMBIGUOUS:
+			simpleError!(scope $"'{token.Lexeme}' is an ambiguous reference between '{args[0]}' and '{args[1]}'.");
+			break;
+
+		case .IMPLICIT_CAST_INVALID:
+			simpleError!(scope $"Unable to implicitly cast '{args[0]}' to '{args[1]}'.");
+			break;
+
+		case .FUNCTION_CALL_TOO_MANY_ARGUMENTS:
+			simpleError!(scope $"Too many arguments, expected {args[0]} fewer.");
+			break;
+		case .FUNCTION_CALL_TOO_FEW_ARGUMENTS:
+			simpleError!(scope $"Not enough arguments specified, expected {args[0]} more.");
+			break;
+		}
 	}
 
 	public Result<ZenEnvironment> Resolve(List<Stmt> statements)
@@ -132,7 +169,7 @@ public class Resolver
 		let @scope = m_scopes.Back;
 		if (!@scope.ContainsKey(token.Lexeme))
 		{
-			reportError(token, scope $"Identifier '{token.Lexeme}' not found.");
+			ThrowError(.IDENTIFIER_NOT_FOUND, token);
 			return false;
 		}
 		return true;
@@ -211,7 +248,7 @@ public class Resolver
 		{
 			if (m_environment.Get(stmt.Name) case .Ok(let val))
 			{
-				reportError(stmt.Name, "Identifier already defined");
+				ThrowError(.IDENTIFIER_ALREADY_DEFINED, stmt.Name);
 				return;
 			}
 		}
@@ -258,7 +295,7 @@ public class Resolver
 		let @scope = m_scopes.Back;
 		if (@scope.ContainsKey(stmt.Name.Lexeme))
 		{
-			reportError(stmt.Name, scope $"An identifier named '{stmt.Name.Lexeme}' has already been declared in this scope.");
+			ThrowError(.IDENTIFIER_ALREADY_DEFINED_SCOPE, stmt.Name);
 		}
 
 		let initType = (Expr.Literal)stmt.Initializer;
@@ -272,7 +309,7 @@ public class Resolver
 			}
 			else
 			{
-				reportError(stmt.Name, scope $"Unable to implicitly cast '{initType.Type.Name}' to '{stmt.Type.Name}'.");
+				ThrowError(.IMPLICIT_CAST_INVALID, stmt.Name, initType.Type.Name, stmt.Type.Name);
 			}
 		}
 
@@ -299,7 +336,7 @@ public class Resolver
 	{
 		if (m_currentFunction == null)
 		{
-			reportError(stmt.Keyword, "Cannot return from top-level code.");
+			ThrowError(.RETURN_TOP_LEVEL, stmt.Keyword);
 			return;
 		}
 
@@ -307,7 +344,7 @@ public class Resolver
 		{
 			if (m_currentFunction.Type != returnType)
 			{
-				reportError(returnType.Token, scope $"Unable to cast '{returnType.Name}' to '{m_currentFunction.Type.Name}'.");
+				ThrowError(.IMPLICIT_CAST_INVALID, returnType.Token, returnType.Name, m_currentFunction.Type.Name);
 			}
 		}
 	}
@@ -345,7 +382,8 @@ public class Resolver
 
 			mixin notAvailableError()
 			{
-				reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
+				ThrowError(.IDENTIFIER_NOT_FOUND, expr.Callee.Name);
+				// reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
 				return .Err;
 			}
 
@@ -360,7 +398,8 @@ public class Resolver
 				childNString.Append("::");
 				childNString.Append(expr.Callee.Name.Lexeme);
 
-				reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+				ThrowError(.IDENTIFIER_AMBIGUOUS, expr.Callee.Name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
+				// reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
 				return .Err;
 			}
 
@@ -455,12 +494,14 @@ public class Resolver
 		if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
 		{
 			let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
-			reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
+			ThrowError(.FUNCTION_CALL_TOO_MANY_ARGUMENTS, expr.Callee.Name, fewer);
+			// reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
 		}
 		else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
 		{
 			let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
-			reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
+			ThrowError(.FUNCTION_CALL_TOO_FEW_ARGUMENTS, expr.Callee.Name, more);
+			// reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
 		}
 		else
 		{
@@ -475,14 +516,16 @@ public class Resolver
 					{
 						if (parameter.Type.Lexeme != argDef.Type.Name)
 						{
-							reportError(@var.Name, "Expected type doesn't match.");
+							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name);
+							// reportError(@var.Name, "Expected type doesn't match.");
 							return;
 						}
 						resolveExpr(argument);
 					}
 					else
 					{
-						reportError(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
+						ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
+						// reportError(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
 					}
 				}
 				else
@@ -501,13 +544,15 @@ public class Resolver
 		{
 			if (!identifier.Mutable)
 			{
-				reportError(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
+				ThrowError(.VARIABLE_ASSIGNMENT_IMMUTABLE, expr.Name, identifier.Name.Lexeme);
+				// reportError(expr.Name, scope $"Variable '{identifier.Name.Lexeme}' is immutable and cannot be assigned to.");
 				return;
 			}
 		}
 		else
 		{
-			reportError(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
+			ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
+			// reportError(expr.Name, scope $"Identifier '{expr.Name.Lexeme}' not found.");
 		}
 	}
 

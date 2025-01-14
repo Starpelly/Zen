@@ -16,7 +16,7 @@ public class Tokenizer
 		("null", .Null),
 		// ("print", .Print),
 		("return", .Return),
-		("this", .This),
+		("self", .Self),
 		("event", .Event),
 		("true", .True),
 		("false", .False),

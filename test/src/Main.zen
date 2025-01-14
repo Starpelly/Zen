@@ -6,7 +6,6 @@ public struct Vector2
 {
 	public var float x;
 	public var float y;
-	public let float z;
 
 	public fun void SetX(let float x)
 	{
@@ -34,11 +33,12 @@ public fun void Main()
 	var int mutable = 0;						 // Mutable variable, the value can be changed.
 
 	Console::WriteLine(constant);
+
+	typeCheck(20);
 }
 
-private fun bool typeCheck()
+private fun bool typeCheck(let bool t)
 {
 	let bool returnValue = true;
-
 	return returnValue;
 }

@@ -6,7 +6,7 @@ using Zen.Parser;
 
 namespace Zen.Compiler;
 
-public class ResolvingError : ICompilerError
+public class ResolvingError : Zen.Builder.ICompilerError
 {
 	public Token Token { get; }
 	public String Message { get; } ~ delete _;
@@ -516,8 +516,7 @@ public class Resolver
 					{
 						if (parameter.Type.Lexeme != argDef.Type.Name)
 						{
-							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name);
-							// reportError(@var.Name, "Expected type doesn't match.");
+							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Lexeme);
 							return;
 						}
 						resolveExpr(argument);
@@ -525,7 +524,13 @@ public class Resolver
 					else
 					{
 						ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
-						// reportError(@var.Name, scope $"Identifier '{@var.Name.Lexeme}' not found.");
+					}
+				}
+				else if (let literal = argument as Expr.Literal)
+				{
+					if (parameter.Type.Lexeme != literal.Type.Name)
+					{
+						ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Lexeme);
 					}
 				}
 				else

@@ -2,39 +2,12 @@ using System;
 
 namespace Sandbox;
 
-public struct Vector2
-{
-	public var float x;
-	public var float y;
-
-	public fun void SetX(let float x)
-	{
-		self.x = x;
-	}
-
-	public fun void SetY(let float y)
-	{
-		self.y = y;
-	}
-}
-
-/*
-public enum Hello
-{
-	Alpha = 0,
-	Beta,
-	Gamma,
-}
-*/
-
 public fun void Main()
 {
-	let string_view constant = "Hello from Zen"; // Immutable variable, the value cannot be changed.
+	let string_view constant = "Hello from Zen!!!"; // Immutable variable, the value cannot be changed.
 	var int mutable = 0;						 // Mutable variable, the value can be changed.
 
 	Console::WriteLine(constant);
-
-	typeCheck(20);
 }
 
 private fun bool typeCheck(let bool t)

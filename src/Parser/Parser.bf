@@ -53,7 +53,7 @@ static
 	}
 }
 
-public class ParseError : ICompilerError
+public class ParseError : Zen.Builder.ICompilerError
 {
 	public Token Token { get; }
 	public String Message { get; } ~ delete _;

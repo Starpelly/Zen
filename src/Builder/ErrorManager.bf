@@ -3,7 +3,7 @@ using System.Collections;
 
 using Zen.Lexer;
 
-namespace Zen;
+namespace Zen.Builder;
 
 public interface ICompilerError
 {
@@ -29,22 +29,25 @@ public class ErrorManager
 	private class CodeWriter
 	{
 		public Dictionary<int, CodeError> Errors { get; } ~ delete _;
+		private ConsoleColor m_codeColor;
 
-		public this(Dictionary<int, CodeError> errors)
+		public this(Dictionary<int, CodeError> errors, ConsoleColor codeColor)
 		{
 			this.Errors = errors;
+			this.m_codeColor = codeColor;
 		}
 
 		public void AppendLine(int line, StringView lineText)
 		{
 			let lineNumStr = line.ToString(.. scope .());
 
+			Console.ForegroundColor = m_codeColor;
 			Console.WriteLine(lineWithNumberBar(lineNumStr, lineText, .. scope .()));
 
 			if (Errors.TryGetValue(line, let error))
 			{
 				Console.ForegroundColor = .Red;
-				defer { Console.ForegroundColor = g_originalConsoleColor; }
+				defer { Console.ForegroundColor = m_codeColor; }
 
 				let arrowLine = scope String(error.Col + error.Length);
 				for (let i < error.Col)
@@ -75,22 +78,17 @@ public class ErrorManager
 		}
 	}
 
-	private static ConsoleColor g_originalConsoleColor;
+	private ConsoleColor m_CodeColor;
 
-	public static void Init()
+	public this(ConsoleColor codeColor)
 	{
-		g_originalConsoleColor = Console.ForegroundColor;
+		this.m_CodeColor = codeColor;
 	}
 
-	public static void Shutdown()
-	{
-		Console.ForegroundColor = g_originalConsoleColor;
-	}
-
-	public static void WriteError(Program.CompiledFile compiledFile, ICompilerError error)
+	public void WriteError(CompiledFile compiledFile, ICompilerError error)
 	{
 		Console.ForegroundColor = .Red;
-		defer { Console.ForegroundColor = g_originalConsoleColor; }
+		defer { Console.ForegroundColor = m_CodeColor; }
 
 		Console.Write(scope $"ERROR: ");
 		Console.WriteLine(scope $"{error.Message}");
@@ -100,12 +98,12 @@ public class ErrorManager
 		Console.WriteLine(scope $"{compiledFile.Name}:{error.Token.Line}:{error.Token.Col + 1}");
 		// Console.WriteLine();
 
-		Console.ForegroundColor = g_originalConsoleColor;
+		Console.ForegroundColor = m_CodeColor;
 
 		let errors = new Dictionary<int, CodeError>();
 		errors.Add(error.Token.Line, .(error.Token.ColReal, error.Token.Lexeme.Length));
 
-		let codeLine = scope CodeWriter(errors);
+		let codeLine = scope CodeWriter(errors, m_CodeColor);
 		codeLine.AppendLine(error.Token.Line, compiledFile.Lexed.Lines[error.Token.Line - 1]);
 	}
 }

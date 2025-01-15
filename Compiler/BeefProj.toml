@@ -3,3 +3,6 @@ FileVersion = 1
 [Project]
 Name = "Zen"
 StartupObject = "Zen.Program"
+
+[Configs.Debug.Win64]
+DebugCommandArguments = "-workspace=$(WorkspaceDir)/test -tcc -run"

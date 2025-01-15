@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 
@@ -10,28 +11,53 @@ namespace Zen;
 class Program
 {
 	private const String g_testDir = "D:/Zen/test";
-	private const String g_testInputDir = $"{g_testDir}/src";
-	private const String g_testOutputCodeDir = $"{g_testDir}/build/codegen";
-	private const String g_testOutputBuildDir = $"{g_testDir}/build/bin";
 	private const String g_testTCCExePath = $"{g_testDir}/tcc/tcc.exe";
+
+	private class CLIArguments
+	{
+		public String InputSrcDir = null ~ delete _;
+		public String OutputSrcDir = null ~ delete _;
+		public String OutputBuildDir = null ~ delete _;
+		public bool BuildWithTCC;
+		public bool RunAfterBuild;
+	}
+
+	public static mixin ToStringViewList(StringSplitEnumerator e, List<StringView> into)
+	{
+		for (let string in e)
+		{
+			into.Add(string);
+		}
+	}
 
 	public static int Main(String[] args)
 	{
-		// Arguments
-		let inputSrcDir 	= (args.Count > 0) ? args[0] : g_testInputDir;
-		let outputCodeDir 	= (args.Count > 1) ? args[1] : g_testOutputCodeDir;
-		let outputBuildDir 	= (args.Count > 2) ? args[2] : g_testOutputBuildDir;
-		let buildWTCC 		= (args.Count > 3) ? args[3] == "-tcc" : false;
-		let runAfterTCC		= (args.Count > 4) ? args[4] == "-r"   : false;
-
+		var cliArgs = scope CLIArguments();
 		for (let arg in args)
 		{
-
+			if (arg.StartsWith("-workspace"))
+			{
+				let argSplit = scope List<StringView>();
+				ToStringViewList!(arg.Split('='), argSplit);
+				cliArgs.InputSrcDir = new $"{argSplit[1]}/src";
+				cliArgs.OutputSrcDir = new $"{argSplit[1]}/build/codegen";
+				cliArgs.OutputBuildDir = new $"{argSplit[1]}/build/bin";
+				continue;
+			}
+			switch (arg)
+			{
+			case "-tcc":
+				cliArgs.BuildWithTCC = true;
+				break;
+			case "-run":
+				cliArgs.RunAfterBuild = true;
+				break;
+			}
 		}
 
 		Console.WriteLine("Compiling...");
 
-		let builder = scope Zen.Builder.WorkspaceBuilder(inputSrcDir, outputCodeDir, outputBuildDir);
+		let builder = scope Zen.Builder.WorkspaceBuilder(cliArgs.InputSrcDir, cliArgs.OutputSrcDir, cliArgs.OutputBuildDir);
 		builder.Run();
 
 		if (!builder.HadErrors)
@@ -50,7 +76,7 @@ class Program
 			}
 
 			Console.ForegroundColor = .DarkGray;
-			// Console.WriteLine(scope $"{builder.FilesWritten} {(builder.FilesWritten > 1) ? "files" : "file" } written");
+			Console.WriteLine(scope $"{builder.FilesWritten} {(builder.FilesWritten > 1) ? "files" : "file" } written");
 
 			let lexerTime = builder.StopwatchLexer.Elapsed.TotalSeconds;
 			let parserTime = builder.StopwatchParser.Elapsed.TotalSeconds;
@@ -79,17 +105,17 @@ class Program
 			Console.WriteLine("Compile failed.");
 		}
 
-		if (buildWTCC && !builder.HadErrors)
+		if (cliArgs.BuildWithTCC && !builder.HadErrors)
 		{
 			builder.TCC(g_testTCCExePath);
 		}
-		if (runAfterTCC && !builder.HadErrors)
+		if (cliArgs.RunAfterBuild && !builder.HadErrors)
 		{
 			let process = scope SpawnedProcess();
 			let processInfo = scope ProcessStartInfo();
 
 			processInfo.UseShellExecute = false;
-			processInfo.SetFileName(outputBuildDir..Append("/Main.exe"));
+			processInfo.SetFileName(cliArgs.OutputBuildDir..Append("/Main.exe"));
 
 			Console.ForegroundColor = .DarkGray;
 			Console.WriteLine("============================");

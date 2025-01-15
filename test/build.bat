@@ -3,8 +3,6 @@
 cls
 
 "../build/Debug_Win64/Zen/Zen.exe" ^
-src ^
-build/codegen ^
-build/bin ^
+-workspace=./ ^
 -tcc ^
--r
+-run

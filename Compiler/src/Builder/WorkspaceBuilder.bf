@@ -162,6 +162,8 @@ public class WorkspaceBuilder
 	/// TinyC compiler
 	public void TCC(StringView tccExePath)
 	{
+		Directory.CreateDirectory(m_outBuildDir);
+
 		mixin getTCCArgs()
 		{
 			let tccArgs = scope::String();

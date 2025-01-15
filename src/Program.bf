@@ -10,8 +10,7 @@ namespace Zen;
 
 class Program
 {
-	private const String g_testDir = "D:/Zen/test";
-	private const String g_testTCCExePath = $"{g_testDir}/tcc/tcc.exe";
+	private const String g_testTCCExePath = $"tcc/tcc.exe";
 
 	private class CLIArguments
 	{
@@ -84,11 +83,11 @@ class Program
 			let codegenTime = builder.StopwatchCodegen.Elapsed.TotalSeconds;
 
 			/*
-			writeTimeOutput("Lexer    time:", lexerTime);
-			writeTimeOutput("Parsing  time:", parserTime);
-			writeTimeOutput("Compiler time:", compilerTime);
-			writeTimeOutput("Codegen  time:", codegenTime);
-			writeTimeOutput("Total    time:", lexerTime + parserTime + compilerTime + codegenTime);
+			writeTimeOutput("Lexing    time:", lexerTime);
+			writeTimeOutput("Parsing   time:", parserTime);
+			writeTimeOutput("Compiling time:", compilerTime);
+			writeTimeOutput("Codegen   time:", codegenTime);
+			writeTimeOutput("Total     time:", lexerTime + parserTime + compilerTime + codegenTime);
 			*/
 
 			writeTimeOutput("Compiler time:", lexerTime + parserTime + compilerTime);

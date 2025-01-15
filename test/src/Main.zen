@@ -10,10 +10,10 @@ public fun void Main()
 
 	Console::WriteLine(constant);
 
-	let bool typeChecker = typeCheck(true);
+	let bool typeChecker = type_Check(true);
 }
 
-private fun bool typeCheck(let bool print)
+private fun bool type_Check(let bool print)
 {
 	let bool returnValue = true;
 

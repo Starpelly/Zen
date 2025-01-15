@@ -364,14 +364,12 @@ public class Tokenizer
 
 	private bool isAlpha(char8 c)
 	{
-		return c.IsLetter;
+		return c.IsLetter || c == '_';
 	}
 
 	private bool isAlphaNumeric(char8 c)
 	{
-		return ((c >= 'a' && c <= 'z') ||
-			(c >= 'A' && c <= 'Z') ||
-			c == '_') || isDigit(c);
+		return isAlpha(c) || isDigit(c);
 	}
 
 	private bool isDigit(char8 c)

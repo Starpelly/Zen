@@ -1,0 +1,9 @@
+FileVersion = 1
+
+[Project]
+Name = "libtcc"
+TargetType = "BeefLib"
+StartupObject = "libtcc.Program"
+
+[Configs.Debug.Win64]
+PostBuildCmds = ["CopyToDependents(\"$(ProjectDir)/vendor/tcc/libtcc.dll\")"]

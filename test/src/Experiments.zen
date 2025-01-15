@@ -2,13 +2,6 @@ using System;
 
 namespace Sandbox::Experiments;
 
-/*
-public struct Vector : (int count)
-{
-	public float[count] C;
-}
-*/
-
 public struct Vector2
 {
 	public var float x;

@@ -172,7 +172,6 @@ public class WorkspaceBuilder
 				tccArgs.Append(file);
 				tccArgs.Append(" ");
 			}
-			tccArgs.Append("-lxmp-lite ");
 			tccArgs.Append("-g ");
 			tccArgs.Append("-w ");
 			tccArgs.Append("-luser32 ");

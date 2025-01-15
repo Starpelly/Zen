@@ -525,60 +525,63 @@ public class Resolver
 				notAvailableError!();
 			}
 		}
-		let zenFunc = existCheck().Value;
+		if (existCheck() case .Ok(let zenFunc))
+		{
+			// resolveExpr(expr.Callee);
 
-		// resolveExpr(expr.Callee);
-
-		if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
-		{
-			let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
-			ThrowError(.FUNCTION_CALL_TOO_MANY_ARGUMENTS, expr.Callee.Name, fewer);
-			// reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
-		}
-		else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
-		{
-			let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
-			ThrowError(.FUNCTION_CALL_TOO_FEW_ARGUMENTS, expr.Callee.Name, more);
-			// reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
-		}
-		else
-		{
-			for (let i < expr.Arguments.Count)
+			if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
 			{
-				let argument = expr.Arguments[i];
-				let parameter = zenFunc.Declaration.Parameters[i];
-
-				if (let @var = argument as Expr.Variable)
+				let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
+				ThrowError(.FUNCTION_CALL_TOO_MANY_ARGUMENTS, expr.Callee.Name, fewer);
+				// reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
+			}
+			else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
+			{
+				let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
+				ThrowError(.FUNCTION_CALL_TOO_FEW_ARGUMENTS, expr.Callee.Name, more);
+				// reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
+			}
+			else
+			{
+				for (let i < expr.Arguments.Count)
 				{
-					if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
+					let argument = expr.Arguments[i];
+					let parameter = zenFunc.Declaration.Parameters[i];
+
+					if (let @var = argument as Expr.Variable)
 					{
-						if (parameter.Type.Name != argDef.Type.Name)
+						if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
 						{
-							ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Name);
-							return;
+							if (parameter.Type.Name != argDef.Type.Name)
+							{
+								ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Name);
+								return;
+							}
+							resolveExpr(argument);
 						}
-						resolveExpr(argument);
+						else
+						{
+							ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
+						}
+					}
+					else if (let literal = argument as Expr.Literal)
+					{
+						if (parameter.Type.Name != literal.Type.Name)
+						{
+							ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
+						}
 					}
 					else
 					{
-						ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
+						// There needs to be an error here.
+						// Although, this should never be the case?
+						// Are functions variables? Probably not...
 					}
-				}
-				else if (let literal = argument as Expr.Literal)
-				{
-					if (parameter.Type.Name != literal.Type.Name)
-					{
-						ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
-					}
-				}
-				else
-				{
-					// There needs to be an error here.
-					// Although, this should never be the case?
-					// Are functions variables? Probably not...
 				}
 			}
 		}
+
+		
 	}
 
 	private void visitVariableExpr(Expr.Variable expr)

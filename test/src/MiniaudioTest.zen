@@ -1,0 +1,14 @@
+namespace Sandbox;
+
+cembed(
+    """
+    #define MINIAUDIO_IMPLEMENTATION
+    #include <D:/miniaudio.h>
+
+    #include <stdio.h>
+    """);
+
+public fun void MiniaudioTest()
+{
+    
+}

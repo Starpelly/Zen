@@ -9,25 +9,7 @@ public fun void Main()
 	let bool boolean = false;
 
 	Console::WriteLine(constant);
+	// Console::TestMessageBox("Hello, World!", "Title");
 
-	let bool typeChecker = type_Check(true);
-}
-
-private fun bool type_Check(let bool print)
-{
-	let bool returnValue = true;
-
-	// print = false;
-	if (print)
-	{
-		let string_view soTrue = "This is fucking true bro!!!!";
-		Console::WriteLine(soTrue);
-	}
-
-	cembed
-	{
-		printf("%s\n", (print) ? "true" : "false");
-	}
-
-	return returnValue;
+	// MiniaudioTest();
 }

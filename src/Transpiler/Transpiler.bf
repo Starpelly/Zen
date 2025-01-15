@@ -281,7 +281,7 @@ public class Transpiler
 
 		if (let cembed = stmt as Stmt.CEmbed)
 		{
-			let bodyText = cembed.Body;
+			let bodyText = cembed.Code;
 			for (let line in bodyText.Split('\n'))
 			{
 				var outLine = line;

@@ -1,10 +1,11 @@
 FileVersion = 1
-Dependencies = {corlib = "*", libtcc = "*"}
 
 [Project]
 Name = "Zen"
 StartupObject = "Zen.Program"
 
 [Configs.Debug.Win64]
-PostBuildCmds = ["CopyFilesIfNewer(\"$(ProjectDir)/vendor/libtcc/vendor/tcc\", \"$(BuildDir)\")"]
 DebugCommandArguments = "-workspace=$(WorkspaceDir)/test -tcc -run"
+
+[Configs.Release.Win64]
+PostBuildCmds = ["CopyFilesIfNewer(\"$(ProjectDir)/vendor/libtcc/vendor/tcc\", \"$(BuildDir)\")"]

@@ -68,11 +68,11 @@ public abstract class Stmt
 
 	public class CEmbed : Stmt
 	{
-		public String Body { get; } ~ delete _;
+		public String Code { get; } ~ delete _;
 
-		public this(String body)
+		public this(StringView code)
 		{
-			this.Body = body;
+			this.Code = new .(code);
 		}
 	}
 

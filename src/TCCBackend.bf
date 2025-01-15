@@ -1,3 +1,4 @@
+/*
 using System;
 using System.IO;
 
@@ -21,8 +22,13 @@ public class TCCBackend
 			}
 			const char *message = "Hello from dynamically compiled code!";
 			""";
+#if DEBUG
+		let tccPath = Path.Combine(.. scope .(), Directory.GetCurrentDirectory(.. scope .()), "vendor/libtcc/vendor/tcc");
+#else
+		let tccPath = Path.Combine(.. scope .(), Path.GetDirectoryPath(Environment.GetExecutableFilePath(.. scope .()), .. scope .()), "tcc");
+#endif
 
-		let compiler = scope TCCCompiler(Path.Combine(.. scope .(), Path.GetDirectoryPath(Environment.GetExecutableFilePath(.. scope .()), .. scope .()), "tcc"));
+		let compiler = scope TCCCompiler(tccPath);
 
 		let comp = compiler.CompileString(code);
 		let real = compiler.Reallocate(libtcc.Bindings.TccRealocateConst.TCC_RELOCATE_AUTO);
@@ -42,3 +48,4 @@ public class TCCBackend
 		return 0;
 	}
 }
+*/

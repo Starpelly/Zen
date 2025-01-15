@@ -2,20 +2,14 @@ using System;
 
 namespace Sandbox;
 
-public fun int Fibonacci()
+public fun int Fibonacci(let int n)
 {
-    var int a = 0;
-    var int b = 1;
-
-// Local functions aren't implemented yet :(
-/*
-    fun int fib()
+    if (n <= 1)
     {
-        let int c = a;
-        a = b;
-        b = a + c;
-        return c;    
+        return n;
     }
-*/
-    // return fib();
+    else
+    {
+        return Fibonacci(n - 2) + Fibonacci(n - 1);
+    }
 }

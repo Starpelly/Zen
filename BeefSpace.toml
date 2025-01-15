@@ -1,5 +1,5 @@
 FileVersion = 1
-Projects = {Zen = {Path = "."}, libtcc = {Path = "vendor/libtcc"}, ZenLsp = {Path = "Lsp"}}
+Projects = {Zen = {Path = "."}}
 
 [Workspace]
 StartupProject = "Zen"

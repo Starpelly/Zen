@@ -172,7 +172,10 @@ public class WorkspaceBuilder
 				tccArgs.Append(file);
 				tccArgs.Append(" ");
 			}
-			tccArgs.Append("-g -w ");
+			tccArgs.Append("-lxmp-lite ");
+			tccArgs.Append("-g ");
+			tccArgs.Append("-w ");
+			tccArgs.Append("-luser32 ");
 			tccArgs.Append(scope $"-o {m_outBuildDir}/Main.exe");
 
 			tccArgs
@@ -188,13 +191,20 @@ public class WorkspaceBuilder
 		processInfo.SetFileName(tccExePath);
 		processInfo.SetArguments(getTCCArgs!());
 
-		process.Start(processInfo);
-
-		// Wait until tcc finishes
-		while (!process.HasExited) {}
-
-		if (process.ExitCode != 0)
+		if (process.Start(processInfo) case .Ok)
 		{
+			// Wait until tcc finishes
+			while (!process.HasExited) {}
+
+			if (process.ExitCode != 0)
+			{
+				m_hadErrors = true;
+			}
+		}
+		else
+		{
+			Console.ForegroundColor = .Red;
+			Console.WriteLine("TCC failed to start for some reason!");
 			m_hadErrors = true;
 		}
 	}

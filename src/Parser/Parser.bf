@@ -355,12 +355,15 @@ public class Parser
 
 	private Stmt.CEmbed CEmbedStatement()
 	{
-		let body = new String(previous().Literal.Get<StringView>());
+		consume(.LeftParentheses, scope $"Expected '(' before 'cembed' body.");
 
-		consume(.LeftBrace, scope $"Expected '\{\' before 'cembed' body.");
-		consume(.RightBrace, "Expected '}' after block.");
+		let code = peek().Literal.Get<StringView>();
+		advance();
 
-		return new Stmt.CEmbed(body);
+		consume(.RightParenthesis, "Expected ')' after 'cembed' body.");
+		consume(.Semicolon, "Expected ';' after cembed declaration.");
+
+		return new Stmt.CEmbed(code);
 	}
 
 	private Stmt.Variable VariableDeclaration(bool mutable)
@@ -552,7 +555,7 @@ public class Parser
 			switch (prevToken.Type)
 			{
 			case .String:
-				typeName = "string";
+				typeName = "string_view";
 				break;
 			case .IntNumber:
 				typeName = "int";

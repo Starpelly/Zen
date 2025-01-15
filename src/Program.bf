@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 
 namespace Zen;
 
@@ -106,7 +107,11 @@ class Program
 
 		if (cliArgs.BuildWithTCC && !builder.HadErrors)
 		{
+#if DEBUG
+			builder.TCC("D:/Zen/vendor/libtcc/vendor/tcc/tcc.exe");
+#else
 			builder.TCC(g_testTCCExePath);
+#endif
 		}
 		if (cliArgs.RunAfterBuild && !builder.HadErrors)
 		{

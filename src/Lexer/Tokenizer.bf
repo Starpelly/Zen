@@ -63,10 +63,18 @@ public class Tokenizer
 		return m_tokens;
 	}
 
-	private void scanToken()
+	private void scanToken(params char8[] ignore)
 	{
 		let c = peek();
 		advance();
+
+		for (let char in ignore)
+		{
+			if (c == char)
+			{
+				return;
+			}	
+		}
 
 		switch (c)
 		{
@@ -143,7 +151,9 @@ public class Tokenizer
 			increaseLine();
 			break;
 
-		case '"': scanString(); break;
+		case '"':
+			scanString();
+			break;
 
 		default:
 			if (isDigit(c))
@@ -193,24 +203,59 @@ public class Tokenizer
 
 	private void scanString()
 	{
-		while (peek() != '"' && !isAtEnd())
+		let isMultiline = peek() == '"' && peekNext() == '"';
+
+		let a = previous();
+
+		if (isMultiline)
 		{
-			if (peek() == '\n') increaseLine();
+			// Consume the initial `"""`.
+			scanToken('"');
+			scanToken('"');
+			scanToken('"');
+
+			// Scan until the closing `"""` or the end of input.
+			while (!(peek() == '"' && peekNext() == '"' && peekNext(2) == '"') && !isAtEnd())
+			{
+			    if (peek() == '\n') increaseLine();
+			    advance();
+			}
+
+			// If we reached the end without finding `"""`.
+			if (isAtEnd())
+			{
+				// Lexer error: Unterminated multi-line string.
+				return;
+			}
+
+			// Consume the closing `"""`.
+			scanToken('"');
+			scanToken('"');
+			scanToken('"');
+		}
+		else
+		{
+			while (peek() != '"' && !isAtEnd())
+			{
+				if (peek() == '\n') increaseLine();
+				advance();
+			}
+
+			if (isAtEnd())
+			{
+				// Un-terminated string.
+				// Lexer error here.
+				return;
+			}
+
+			// Closing ".
 			advance();
 		}
 
-		if (isAtEnd())
-		{
-			// Un-terminated string.
-			// Lexer error here.
-			return;
-		}
-
-		// Closing ".
-		advance();
 
 		// Trim the surrounding quotes.
-		let value = substring(m_start + 1, m_current - 1);
+		let offset = (isMultiline) ? 3 : 1;
+		let value = substring(m_start + offset, m_current - offset);
 		addToken(.String, Variant.Create<StringView>(value));
 	}
 
@@ -253,6 +298,7 @@ public class Tokenizer
 
 	}
 
+	/*
 	private void scanCEmbed()
 	{
 		// Opening '{', we'll assume there is one for now.
@@ -294,6 +340,7 @@ public class Tokenizer
 		addToken(.LeftBrace);
 		addToken(.RightBrace);
 	}
+	*/
 
 	private void scanIdentifier()
 	{
@@ -306,14 +353,7 @@ public class Tokenizer
 
 		if (KeywordsMap.TryGetValue(scope .(text), let type))
 		{
-			if (type == .CEmbed)
-			{
-				scanCEmbed();
-			}
-			else
-			{
-				addToken(type);
-			}
+			addToken(type);
 		}
 		else
 		{
@@ -333,6 +373,11 @@ public class Tokenizer
 		return true;
 	}
 
+	public char8 previous(int backwards = 1)
+	{
+		return Source[m_current - backwards];
+	}
+
 	/// Returns the current character in the text.
 	private char8 peek()
 	{
@@ -341,10 +386,10 @@ public class Tokenizer
 	}
 
 	/// Returns the next character in the text.
-	private char8 peekNext()
+	private char8 peekNext(int forwards = 1)
 	{
-		if (m_current + 1 >= Source.Length) return '\0';
-		return Source[m_current + 1];
+		if (m_current + forwards >= Source.Length) return '\0';
+		return Source[m_current + forwards];
 	}
 
 	/// Moves the character in the text forward by 'count'.

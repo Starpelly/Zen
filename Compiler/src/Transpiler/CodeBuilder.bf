@@ -31,6 +31,12 @@ public class CodeBuilder
 		m_code.Append('\n');
 	}
 
+	public void AppendLineIgnoreTabs(StringView text)
+	{
+		m_code.Append(text);
+		m_code.Append('\n');
+	}
+
 	public void AppendEmptyLine()
 	{
 		m_code.Append('\n');

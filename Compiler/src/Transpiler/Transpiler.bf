@@ -63,18 +63,6 @@ public class Transpiler
 					}
 					m_outputH.Append(");");
 					m_outputH.AppendEmptyLine();
-
-					// Shitty code to check for local functions because C doesn't support local functions...
-					for (let bodyStatement in fun.Body.Statements)
-					{
-						if (let localFun = bodyStatement as Stmt.Function)
-						{
-							if (localFun.Kind == .LocalFunction)
-							{
-								m_outputH.AppendLine(scope $"{localFun.Type.Name} {funcName}_{localFun.Name.Lexeme}();");
-							}
-						}
-					}
 				}
 				else if (statement.GetType() == typeof(Stmt.Struct))
 				{
@@ -159,6 +147,41 @@ public class Transpiler
 			}
 			funcName.Append(fun.Name.Lexeme);
 
+			// Shitty code to check for local functions because C doesn't support local functions...
+			var localVars = scope List<Stmt.Variable>(); // This should probably be stored when compiling?
+			for (let bodyStatement in fun.Body.Statements)
+			{
+				if (var localFun = bodyStatement as Stmt.Function)
+				{
+					if (localFun.Kind == .LocalFunction)
+					{
+						let localFunName = scope $"{funcName}_{localFun.Name.Lexeme}";
+						/*
+						outLexeme.AppendLine("typedef struct {");
+						{
+							outLexeme.IncreaseTab();
+							{
+								for (let variable in localVars)
+								{
+									outLexeme.AppendLine(scope $"{variable.Type.Name} {variable.Name.Lexeme};");
+								}
+							}
+							outLexeme.DecreaseTab();
+						}
+						outLexeme.Append("}");
+						outLexeme.AppendLine(scope $" {localFunName}_Context;");
+						*/
+
+						stmtToString(ref outLexeme, bodyStatement);
+						// m_outputH.AppendLine();
+					}
+				}
+				if (var @var = bodyStatement as Stmt.Variable)
+				{
+					localVars.Add(@var);
+				}
+			}
+
 			if (fun.Kind == .Main)
 			{
 				funcName.Clear();
@@ -170,6 +193,11 @@ public class Transpiler
 			{
 				for (let bodyStatement in fun.Body.Statements)
 				{
+					if (let localFun = bodyStatement as Stmt.Function)
+					{
+						if (localFun.Kind == .LocalFunction)
+							continue;
+					}
 					stmtToString(ref outLexeme, bodyStatement);
 				}
 			}

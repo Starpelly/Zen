@@ -2,11 +2,6 @@ using System;
 
 namespace Sandbox;
 
-cembed
-{
-	#include <stdio.h>
-}
-
 public fun void Main()
 {
 	let string_view constant = "Hello from Zen!!!";
@@ -16,12 +11,6 @@ public fun void Main()
 	Console::WriteLine(constant);
 
 	let bool typeChecker = typeCheck(true);
-	/*
-	cembed
-	{
-		printf("%i",)
-	}
-	*/
 }
 
 private fun bool typeCheck(let bool print)

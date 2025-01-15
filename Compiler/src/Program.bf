@@ -24,6 +24,11 @@ class Program
 		let buildWTCC 		= (args.Count > 3) ? args[3] == "-tcc" : false;
 		let runAfterTCC		= (args.Count > 4) ? args[4] == "-r"   : false;
 
+		for (let arg in args)
+		{
+
+		}
+
 		Console.WriteLine("Compiling...");
 
 		let builder = scope Zen.Builder.WorkspaceBuilder(inputSrcDir, outputCodeDir, outputBuildDir);

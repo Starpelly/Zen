@@ -2,12 +2,13 @@ using System;
 
 namespace Sandbox;
 
-/*
 public fun int Fibonacci()
 {
     var int a = 0;
     var int b = 1;
 
+// Local functions aren't implemented yet :(
+/*
     fun int fib()
     {
         let int c = a;
@@ -15,7 +16,6 @@ public fun int Fibonacci()
         b = a + c;
         return c;    
     }
-
-    return fib();
-}
 */
+    // return fib();
+}

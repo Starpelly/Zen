@@ -24,6 +24,17 @@ public class Transpiler
 	/// 1. .h file, 2. .c file
 	public (String, String) Compile(String fileName, String fullFileName)
 	{
+		var zenHeaderPath = scope String();
+		zenHeaderPath.Append('"');
+		for (let i in fullFileName.Split('/'))
+		{
+			zenHeaderPath.Append("../");
+		}
+		zenHeaderPath.Append("Program.h");
+		zenHeaderPath.Append('"');
+
+		// ----------------------------------
+
 		m_outputH.AppendBannerAutogen();
 		m_outputH.AppendEmptyLine();
 
@@ -56,17 +67,27 @@ public class Transpiler
 					}
 
 					let funcName = scope String();
-					if (fun.Namespace != null && fun.Kind != .Main)
+					if (fun.Kind == .Main)
 					{
-						let ns = writeNamespace(.. scope .(), fun.Namespace);
-						funcName.Append(ns);
+						continue;
+						// funcName.Append("main");
 					}
-					funcName.Append(fun.Name.Lexeme);
+					else
+					{
+						if (fun.Namespace != null && fun.Kind != .Main)
+						{
+							let ns = writeNamespace(.. scope .(), fun.Namespace);
+							funcName.Append(ns);
+						}
+						funcName.Append(fun.Name.Lexeme);
+					}
 
 					m_outputH.Append(scope $"{fun.Type.Name} {funcName}");
 					m_outputH.Append("(");
 					for (let param in fun.Parameters)
 					{
+						if (!param.Mutable)
+							m_outputH.Append("const ");
 						m_outputH.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
 						if (param != fun.Parameters.Back)
 							m_outputH.Append(", ");
@@ -84,15 +105,6 @@ public class Transpiler
 
 		m_outputC.AppendBannerAutogen();
 		m_outputC.AppendEmptyLine();
-
-		var zenHeaderPath = scope String();
-		zenHeaderPath.Append('"');
-		for (let i in fullFileName.Split('/'))
-		{
-			zenHeaderPath.Append("../");
-		}
-		zenHeaderPath.Append("Zen.h");
-		zenHeaderPath.Append('"');
 
 		m_outputC.AppendLine(scope $"#include {zenHeaderPath}");
 		m_outputC.AppendEmptyLine();
@@ -165,7 +177,7 @@ public class Transpiler
 				{
 					if (localFun.Kind == .LocalFunction)
 					{
-						let localFunName = scope $"{funcName}_{localFun.Name.Lexeme}";
+						// let localFunName = scope $"{funcName}_{localFun.Name.Lexeme}";
 						/*
 						outLexeme.AppendLine("typedef struct {");
 						{
@@ -341,7 +353,7 @@ public class Transpiler
 				outLexeme.Append(literal.Value.Get<int>());
 				break;
 			case typeof(double):
-				outLexeme.Append(literal.Value.Get<double>());
+				outLexeme.Append(literal.Token.Lexeme);
 				break;
 			case typeof(bool):
 				outLexeme.Append(literal.Value.Get<bool>() ? "true" : "false");

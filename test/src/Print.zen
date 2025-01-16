@@ -1,0 +1,8 @@
+using System;
+
+namespace Sandbox;
+
+public fun void PrintShit(let string_view text)
+{
+    Console::WriteLine(text);
+}

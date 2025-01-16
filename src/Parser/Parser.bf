@@ -434,10 +434,6 @@ public class Parser
 				return new Expr.Assign(name, value);
 			}
 
-			if (let getExpr = expr as Expr.Get)
-			{
-			}
-
 			reportError(equals, "Invalid assignment target.");
 		}
 

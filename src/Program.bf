@@ -96,7 +96,6 @@ class Program
 			writeTimeOutput("Total    time:", lexerTime + parserTime + compilerTime + codegenTime);
 
 			Console.ResetColor();
-			Console.ForegroundColor = Console.ForegroundColor;
 		}
 		else
 		{
@@ -124,7 +123,6 @@ class Program
 			Console.ForegroundColor = .DarkGray;
 			Console.WriteLine("============================");
 			Console.ResetColor();
-			Console.ForegroundColor = Console.ForegroundColor;
 			process.Start(processInfo);
 		}
 

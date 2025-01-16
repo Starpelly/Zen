@@ -115,9 +115,7 @@ public class WorkspaceBuilder
 
 	public ~this()
 	{
-		// This is a corlib bug...
 		Console.ResetColor();
-		Console.ForegroundColor = Console.ForegroundColor;
 	}
 
 	/// Main compilation function for a Zen Workspace.
@@ -172,9 +170,11 @@ public class WorkspaceBuilder
 				tccArgs.Append(file);
 				tccArgs.Append(" ");
 			}
+
 			tccArgs.Append("-g ");
 			tccArgs.Append("-w ");
 			tccArgs.Append("-luser32 ");
+
 			tccArgs.Append(scope $"-o {m_outBuildDir}/Main.exe");
 
 			tccArgs
@@ -282,6 +282,7 @@ public class WorkspaceBuilder
 		let std = scope StandardLib();
 		let zenHeader = std.WriteZenHeader(.. scope .());
 		let programFile = std.WriteProgramFile(.. scope .());
+		let allFile = std.WriteAllFile(.. scope .(), m_parsedFiles);
 
 		// This is quite expensive(?)
 		// There should be a smarter way of generating files.
@@ -294,7 +295,8 @@ public class WorkspaceBuilder
 		}
 
 		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Zen.h"), zenHeader);
-		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.c"), programFile);
+		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "Program.h"), programFile);
+		File.WriteAllText(Path.Combine(.. scope .(), outputSrcDir, "All.h"), allFile);
 
 		for (let file in m_parsedFiles)
 		{

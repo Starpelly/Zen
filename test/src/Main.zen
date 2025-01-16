@@ -2,10 +2,6 @@ using System;
 
 namespace Sandbox;
 
-cembed("""
-#include "Corlib/Math.h"
-""");
-
 public fun void Main()
 {
 	let string_view constant = "Hello from Zen!!!";
@@ -14,8 +10,10 @@ public fun void Main()
 
 	let double pi = Math::PI;
 
-	Console::WriteLine(constant);
-	Console::TestMessageBox("Hello, World!", "Title");
+	PrintShit("test");
 
-	// MiniaudioTest("C:/Users/Braedon/Music/JuniTrance.wav");
+	Math::Add(2, 2);
+
+	// Console::WriteLine(constant);
+	// Console::TestMessageBox("Hello, World!", "Title");
 }

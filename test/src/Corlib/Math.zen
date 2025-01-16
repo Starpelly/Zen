@@ -3,7 +3,6 @@ namespace System::Math;
 public const double PI = 3.14159265358979323846;
 public const double E  = 2.7182818284590452354;
 
-/*
 public fun int Add(let int a, let int b)
 {
 	return a + b;
@@ -28,4 +27,3 @@ public fun int Mod(let int a, let int b)
 {
     return a % b;
 }
-*/

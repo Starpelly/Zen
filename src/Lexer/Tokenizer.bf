@@ -206,8 +206,6 @@ public class Tokenizer
 	{
 		let isMultiline = peek() == '"' && peekNext() == '"';
 
-		let a = previous();
-
 		if (isMultiline)
 		{
 			// Consume the initial `"""`.

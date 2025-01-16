@@ -225,10 +225,12 @@ public class Resolver
 					ThrowError(.IMPLICIT_CAST_INVALID, a.Token, literal.Type.Name, a.Name);
 				}
 			}
+			/*
 			else if (let call = expr as Expr.Call)
 			{
 	
 			}
+			*/
 		}
 	}
 
@@ -598,8 +600,6 @@ public class Resolver
 		}
 		if (zenIdentifierExistCheck<ZenConst, Expr.Variable>(expr, expr.Name) case .Ok(let zenConst))
 		{
-			var a = 0;
-
 			return;
 		}
 

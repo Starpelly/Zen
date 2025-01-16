@@ -2,14 +2,20 @@ using System;
 
 namespace Sandbox;
 
+cembed("""
+#include "Corlib/Math.h"
+""");
+
 public fun void Main()
 {
 	let string_view constant = "Hello from Zen!!!";
 	var int mutable = 0;
 	let bool boolean = false;
 
+	let double pi = Math::PI;
+
 	Console::WriteLine(constant);
-	// Console::TestMessageBox("Hello, World!", "Title");
+	Console::TestMessageBox("Hello, World!", "Title");
 
 	// MiniaudioTest("C:/Users/Braedon/Music/JuniTrance.wav");
 }

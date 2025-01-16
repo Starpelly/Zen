@@ -7,6 +7,11 @@ namespace Zen.Parser;
 
 public abstract class Stmt
 {
+	public interface IIdentifier
+	{
+		public Namespace Namespace { get; }
+	}
+
 	public class Parameter : Stmt
 	{
 		public Token Type { get; }
@@ -76,7 +81,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Function : Stmt
+	public class Function : Stmt, IIdentifier
 	{
 		public enum FunctionKind
 		{
@@ -92,31 +97,46 @@ public abstract class Stmt
 		public ASTType Type { get; }
 		public List<Variable> Parameters { get; } ~ DeleteContainerAndItems!(_);
 		public Block Body { get; private set; } ~ delete _;
-
 		public Namespace Namespace { get; }
 
-		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Block body)
+		public this(FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Block body, Namespace @namespace)
 		{
-			this.Namespace = @namespace;
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
 			this.Parameters = parameters;
 			this.Body = body;
+			this.Namespace = @namespace;
 		}
 
-		public this(Namespace @namespace, FunctionKind kind, Token name, ASTType type, List<Variable> parameters)
+		public this(FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Namespace @namespace)
 		{
-			this.Namespace = @namespace;
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
 			this.Parameters = parameters;
+			this.Namespace = @namespace;
 		}
 
 		public void SetBody(Block body)
 		{
 			this.Body = body;
+		}
+	}
+
+	public class Const : Stmt, IIdentifier
+	{
+		public Token Name { get; }
+		public ASTType Type { get; }
+		public Expr Initializer { get; } ~ delete _;
+		public Namespace Namespace { get; }
+
+		public this(Token name, ASTType type, Expr initializer, Namespace @namespace)
+		{
+			this.Name = name;
+			this.Type = type;
+			this.Initializer = initializer;
+			this.Namespace = @namespace;
 		}
 	}
 

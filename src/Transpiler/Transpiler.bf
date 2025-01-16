@@ -34,6 +34,16 @@ public class Transpiler
 		{
 			if (statement != null)
 			{
+				if (let @const = statement as Stmt.Const)
+				{
+					let val = expressionToString(.. scope .(), @const.Initializer);
+					let name = scope String();
+					writeNamespace(name, @const.Namespace);
+					name.Append(@const.Name.Lexeme);
+
+					m_outputH.AppendLine(scope $"#define {name} {val}");
+				}
+
 				if (statement.GetType() == typeof(Stmt.Function))
 				{
 					let fun = ((Stmt.Function)statement);
@@ -286,7 +296,7 @@ public class Transpiler
 			{
 				var outLine = line;
 				outLine.TrimEnd('\n');
-				outLine.TrimStart();
+				// outLine.TrimStart();
 
 				if (outLine.IsWhiteSpace || outLine.IsNull || outLine.IsEmpty) continue;
 			   	outLexeme.AppendLine(outLine);
@@ -299,6 +309,8 @@ public class Transpiler
 	{
 		if (let variable = expr as Expr.Variable)
 		{
+			if (variable.Namespaces != null)
+				writeNamespace(outLexeme, variable.Namespaces);
 			outLexeme.Append(variable.Name.Lexeme);
 		}
 

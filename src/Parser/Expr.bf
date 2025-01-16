@@ -7,9 +7,14 @@ namespace Zen.Parser;
 
 public abstract class Expr
 {
-	public interface IHasType
+	public interface IHaveType
 	{
 		public abstract ASTType GetType();
+	}
+
+	public interface IHaveNamespaces
+	{
+		public NamespaceList Namespaces { get; }
 	}
 
 	public class Binary : Expr
@@ -26,7 +31,24 @@ public abstract class Expr
 		}
 	}
 
-	public class Call : Expr
+	public class Variable : Expr, IHaveNamespaces
+	{
+		public Token Name { get; }
+		public NamespaceList Namespaces { get; private set; } ~ delete _;
+
+		public this(Token name, NamespaceList namespaces)
+		{
+			this.Name = name;
+			this.Namespaces = namespaces;
+		}
+
+		public void SetNamespaces(NamespaceList namespaces)
+		{
+			this.Namespaces = namespaces;
+		}
+	}
+
+	public class Call : Expr, IHaveNamespaces
 	{
 		public Expr.Variable Callee { get; } ~ delete _;
 		public Token Paren { get; }
@@ -113,16 +135,6 @@ public abstract class Expr
 		public this(Expr expression)
 		{
 			this.Expression = expression;
-		}
-	}
-
-	public class Variable : Expr
-	{
-		public Token Name { get; }
-
-		public this(Token name)
-		{
-			this.Name = name;
 		}
 	}
 

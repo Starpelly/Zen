@@ -18,7 +18,7 @@ public enum TokenType
 	And, Or, If, Else, Fun, Event, For, While, Null,
 	Print, Return, Self, True, False, Var, Let,
 	Enum, Match, Struct, Switch, Namespace, Using, CEmbed,
-	Public, Private,
+	Public, Private, Const,
 
 	EOF,
 }

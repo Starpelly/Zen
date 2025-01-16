@@ -32,6 +32,7 @@ public class Tokenizer
 		("cembed", .CEmbed),
 		("public", .Public),
 		("private", .Private),
+		("const", .Const),
 	} ~ delete _;
 
 	private readonly List<Token> m_tokens { get; } = new .();

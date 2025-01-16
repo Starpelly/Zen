@@ -105,6 +105,10 @@ public class Resolver
 			{
 				visitFunctionStmtDefinition(fun);
 			}
+			if (let @const = statement as Stmt.Const)
+			{
+				visitConstStmtDefinition(@const);
+			}
 		}
 	}
 
@@ -164,7 +168,7 @@ public class Resolver
 		}
 	}
 
-	private bool identifierExists(Token token)
+	private bool localIdentifierExists(Token token)
 	{
 		for (let i < m_scopes.Count)
 		{
@@ -174,7 +178,6 @@ public class Resolver
 				return true;
 			}
 		}
-		ThrowError(.IDENTIFIER_NOT_FOUND, token);
 		return false;
 	}
 
@@ -268,40 +271,46 @@ public class Resolver
 		m_currentNamespace = stmt;
 	}
 
-	private void visitFunctionStmtDefinition(Stmt.Function stmt)
+	private mixin AddIdentifier(Identifier identifier)
 	{
-		// Function already exists
-		// Tbh, this should be for all identifiers in a scope
-		// But we'll do this simply for now.
-
-		ZenNamespace @namespaceToAdd = null;
-		if (stmt.Namespace != null)
+		ZenNamespace namespaceToAdd = null;
+		if (m_currentNamespace != null)
 		{
-			let stmtNSStr = stmt.Namespace.List.NamespaceListToString(.. scope .());
+			let stmtNSStr = m_currentNamespace.List.NamespaceListToString(.. scope .());
 			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
 			{
-				@namespaceToAdd = @namespace.Get<ZenNamespace>();
+				namespaceToAdd = @namespace.Get<ZenNamespace>();
 			}
 		}
 		else
 		{
-			if (m_environment.Get(stmt.Name) case .Ok(let val))
+			if (m_environment.Get(identifier.Name) case .Ok(let val))
 			{
-				ThrowError(.IDENTIFIER_ALREADY_DEFINED, stmt.Name);
+				ThrowError(.IDENTIFIER_ALREADY_DEFINED, identifier.Name);
 				return;
 			}
 		}
 
-		let fun = new ZenFunction(stmt);
-
-		if (@namespaceToAdd == null) // Global function
+		if (namespaceToAdd == null) // Global function
 		{
-			m_environment.Define(stmt.Name.Lexeme, Variant.Create(fun));
+			m_environment.Define(identifier.Name.Lexeme, Variant.Create(identifier));
 		}
 		else
 		{
-			@namespaceToAdd.AddFunction(fun);
+			namespaceToAdd.AddIdentifier(identifier);
 		}
+	}
+
+	private void visitFunctionStmtDefinition(Stmt.Function stmt)
+	{
+		let fun = new ZenFunction(stmt);
+		AddIdentifier!(fun);
+	}
+
+	private void visitConstStmtDefinition(Stmt.Const stmt)
+	{
+		let @const = new ZenConst(stmt);
+		AddIdentifier!(@const);
 	}
 
 	private void visitFunctionStmtBody(Stmt.Function stmt)
@@ -409,137 +418,136 @@ public class Resolver
 	// Expressions
 	// ----------------------------------------------------------------
 
-	private void visitCallExpr(Expr.Call expr)
+	private Result<TIdentifier> zenIdentifierExistCheck<TIdentifier, TExpr>(TExpr expr, Token name) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
 	{
-		Result<ZenFunction> existCheck()
+		void addNamespaceToExpr(Token namespaceToken)
 		{
-			void addNamespaceToExpr(Token namespaceToken)
-			{
-				expr.Namespaces.AddFront(namespaceToken);
-			}
+			expr.Namespaces.AddFront(namespaceToken);
+		}
 
-			mixin notAvailableError()
-			{
-				ThrowError(.IDENTIFIER_NOT_FOUND, expr.Callee.Name);
-				// reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
-				return .Err;
-			}
+		mixin notAvailableError()
+		{
+			ThrowError(.IDENTIFIER_NOT_FOUND, name);
+			// reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
+			return .Err;
+		}
 
-			mixin ambigRefError(Token one, Token two)
+		mixin ambigRefError(Token one, Token two)
+		{
+			let childNString = scope String();
+			for (let child in expr.Namespaces)
 			{
-				let childNString = scope String();
-				for (let child in expr.Namespaces)
-				{
-					childNString.Append("::");
-					childNString.Append(child.Lexeme);
-				}
 				childNString.Append("::");
-				childNString.Append(expr.Callee.Name.Lexeme);
+				childNString.Append(child.Lexeme);
+			}
+			childNString.Append("::");
+			childNString.Append(name.Lexeme);
 
-				ThrowError(.IDENTIFIER_AMBIGUOUS, expr.Callee.Name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
-				// reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+			ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
+			// reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+			return .Err;
+		}
+
+		// Check if the function we're calling is global.
+		if (expr.Namespaces.Count > 0)
+		{
+			let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
+
+			if (m_environment.Get(namespaceKey) case .Ok)
+			{
 				return .Err;
 			}
 
-			// Check if the function we're calling is global.
-			if (expr.Namespaces.Count > 0)
+			var foundUsing = false;
+			var foundUsings = scope NamespaceList();
+			var foundUsingName = default(Token);
+			for (let @using in m_currentUsings)
 			{
-				let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
-
-				if (m_environment.Get(namespaceKey) case .Ok)
+				if (m_environment.Get(@using.Name) case .Ok)
 				{
-					return .Err;
+					if (foundUsing)
+					{
+						ambigRefError!(foundUsings[0], @using.Name);
+					}
+
+					// addNamespaceToExpr(@using.Name);
+					foundUsing = true;
+					foundUsings.Add(@using.Name);
+					foundUsingName = @using.Name;
 				}
+			}
 
-				var foundUsing = false;
-				var foundUsings = scope NamespaceList();
-				var foundUsingName = default(Token);
-				for (let @using in m_currentUsings)
+			if (!foundUsing)
+			{
+				if (m_environment.Get(namespaceKey) case .Err)
 				{
-					if (m_environment.Get(@using.Name) case .Ok)
-					{
-						if (foundUsing)
-						{
-							ambigRefError!(foundUsings[0], @using.Name);
-						}
-
-						// addNamespaceToExpr(@using.Name);
-						foundUsing = true;
-						foundUsings.Add(@using.Name);
-						foundUsingName = @using.Name;
-					}
-				}
-
-				if (!foundUsing)
-				{
-					if (m_environment.Get(namespaceKey) case .Err)
-					{
-						addNamespaceToExpr(m_currentNamespace.Front);
-					}
-				}
-				else
-				{
-					// Test if the same type exists in the current namespace.
-
-					let temp = scope NamespaceList();
-					temp.AddFront(m_currentNamespace.Front);
-					temp.AddRange(expr.Namespaces);
-
-					let tempStr = temp.NamespaceListToString(.. scope .());
-					if (m_environment.Get(tempStr) case .Ok)
-					{
-						ambigRefError!(foundUsings[0], m_currentNamespace.Front);
-					}
-					else
-					{
-						addNamespaceToExpr(foundUsingName);
-					}
+					addNamespaceToExpr(m_currentNamespace.Front);
 				}
 			}
 			else
 			{
-				// If it isn't global, we can cheat and just add the current push the current namespace so the compiler-
-				// thinks it's part of the namespace.
-				//
-				// We've already checked for duplicates earlier in the function definition.
-				addNamespaceToExpr(m_currentNamespace.Front);
-			}
+				// Test if the same type exists in the current namespace.
 
-			let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
-			if (m_environment.Get(namespaceKey) case .Ok(let val))
-			{
-				let zenNamespace = val.Get<ZenNamespace>();
+				let temp = scope NamespaceList();
+				temp.AddFront(m_currentNamespace.Front);
+				temp.AddRange(expr.Namespaces);
 
-				if (zenNamespace.FindFunction(expr.Callee.Name.Lexeme, let zenFunc))
+				let tempStr = temp.NamespaceListToString(.. scope .());
+				if (m_environment.Get(tempStr) case .Ok)
 				{
-					// let zenFuncNamespace = zenFunc.Declaration.Namespace;
-					return .Ok(zenFunc);
+					ambigRefError!(foundUsings[0], m_currentNamespace.Front);
 				}
 				else
 				{
-					notAvailableError!();
+					addNamespaceToExpr(foundUsingName);
 				}
+			}
+		}
+		else
+		{
+			// If it isn't global, we can cheat and just add the current push the current namespace so the compiler-
+			// thinks it's part of the namespace.
+			//
+			// We've already checked for duplicates earlier in the identifier definition.
+			addNamespaceToExpr(m_currentNamespace.Front);
+		}
+
+		let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
+		if (m_environment.Get(namespaceKey) case .Ok(let val))
+		{
+			let zenNamespace = val.Get<ZenNamespace>();
+
+			if (zenNamespace.FindIdentifier<TIdentifier>(name.Lexeme, let zenFunc))
+			{
+				// let zenFuncNamespace = zenFunc.Declaration.Namespace;
+				return .Ok(zenFunc);
 			}
 			else
 			{
 				notAvailableError!();
 			}
 		}
-		if (existCheck() case .Ok(let zenFunc))
+		else
 		{
-			// resolveExpr(expr.Callee);
+			notAvailableError!();
+		}
+	}
 
+	private void visitCallExpr(Expr.Call expr)
+	{
+		if (zenIdentifierExistCheck<ZenFunction, Expr.Call>(expr, expr.Callee.Name) case .Ok(let zenFunc))
+		{
+			// Throws an error if we have too many parameters.
 			if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
 			{
 				let fewer = expr.Arguments.Count - zenFunc.Declaration.Parameters.Count;
 				ThrowError(.FUNCTION_CALL_TOO_MANY_ARGUMENTS, expr.Callee.Name, fewer);
-				// reportError(expr.Callee.Name, scope $"Too many arguments, expected {fewer} fewer.");
 			}
+			// Throws an error if we have too little parameters.
 			else if (zenFunc.Declaration.Parameters.Count > expr.Arguments.Count)
 			{
 				let more = zenFunc.Declaration.Parameters.Count - expr.Arguments.Count;
 				ThrowError(.FUNCTION_CALL_TOO_FEW_ARGUMENTS, expr.Callee.Name, more);
-				// reportError(expr.Callee.Name, scope $"Not enough arguments specified, expected {more} more.");
 			}
 			else
 			{
@@ -580,13 +588,22 @@ public class Resolver
 				}
 			}
 		}
-
-		
 	}
 
 	private void visitVariableExpr(Expr.Variable expr)
 	{
-		identifierExists(expr.Name);
+		if (localIdentifierExists(expr.Name))
+		{
+			return;
+		}
+		if (zenIdentifierExistCheck<ZenConst, Expr.Variable>(expr, expr.Name) case .Ok(let zenConst))
+		{
+			var a = 0;
+
+			return;
+		}
+
+		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
 	}
 
 	private void visitAssignExpr(Expr.Assign expr)

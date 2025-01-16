@@ -127,6 +127,8 @@ public class Parser
 			return VariableDeclaration(true);
 		if (match(.Let))
 			return VariableDeclaration(false);
+		if (match(.Const))
+			return ConstDeclaration();
 
 		// if (match(.Print))
 		// 	return PrintStatement();
@@ -255,7 +257,7 @@ public class Parser
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		var retFunc = new Stmt.Function(m_currentNamespace, kind, name, .(type), parameters);
+		var retFunc = new Stmt.Function(kind, name, .(type), parameters, m_currentNamespace);
 
 		let lastFunc = m_currentFunction;
 		m_currentFunction = retFunc;
@@ -387,6 +389,26 @@ public class Parser
 		return new Stmt.Variable(name, .(type), initializer, mutable);
 	}
 
+	private Stmt.Const ConstDeclaration()
+	{
+		let type = consume(.Identifier, "Expected const type.");
+		let name = consume(.Identifier, "Expected const name.");
+
+		Expr initializer = null;
+		if (match(.Equal))
+		{
+			initializer = Expression();
+		}
+		else
+		{
+			reportError(name, "Expected value for const type.");
+		}
+
+		consume(.Semicolon, "Expected ';' after const declaration.");
+
+		return new Stmt.Const(name, .(type), initializer, m_currentNamespace);
+	}
+
 	// ----------------------------------------------------------------
 	// Expressions
 	// ----------------------------------------------------------------
@@ -502,6 +524,7 @@ public class Parser
 				namespaces = new .();
 			}
 		}
+
 		while (true)
 		{
 			if (match(.LeftParentheses))
@@ -524,6 +547,10 @@ public class Parser
 			}
 			else
 			{
+				if (let variable = expr as Expr.Variable)
+				{
+					variable.SetNamespaces(namespaces);
+				}
 				break;
 			}
 		}
@@ -585,7 +612,18 @@ public class Parser
 
 		if (match(.Identifier))
 		{
-			return new Expr.Variable(previous());
+			/*
+			NamespaceList namespaces = null;
+			mixin createNamespaces()
+			{
+				if (namespaces == null)
+				{
+					namespaces = new .();
+				}
+			}
+			*/
+
+			return new Expr.Variable(previous(), null);
 		}
 
 		if (match(.LeftParentheses))

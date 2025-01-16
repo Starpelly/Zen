@@ -37,7 +37,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.zen",
-				"match": "\\b(if|else|while|for|return|let|var|true|false|public|fun|using|static|defer|struct|private|enum|define|namespace|scope|new|delete|self|cembed|cinclude|match|switch|case)\\b"
+				"match": "\\b(if|else|while|for|return|let|var|true|false|public|fun|using|static|defer|struct|private|const|enum|define|namespace|scope|new|delete|self|cembed|cinclude|match|switch|case)\\b"
 			}]
 		},
 		"strings": {

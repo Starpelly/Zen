@@ -4,15 +4,19 @@ namespace Sandbox;
 
 public fun void Main()
 {
+	/*
 	let string_view constant = "Hello from Zen!!!";
 	var int mutable = 0;
 	let bool boolean = false;
 
+
+	*/
+
 	let double pi = Math::PI;
 
-	PrintShit("test");
 
-	Math::Add(2, 2);
+	Player::Update();
+	Player::Draw();
 
 	// Console::WriteLine(constant);
 	// Console::TestMessageBox("Hello, World!", "Title");

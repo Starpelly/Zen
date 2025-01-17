@@ -282,6 +282,13 @@ public class Resolver
 			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
 			{
 				namespaceToAdd = @namespace.Get<ZenNamespace>();
+
+				if (namespaceToAdd.FindIdentifier<Identifier>(identifier.Name.Lexeme, let temp))
+				{
+					ThrowError(.IDENTIFIER_ALREADY_DEFINED, identifier.Name);
+					delete identifier;
+					return;
+				}
 			}
 		}
 		else
@@ -293,11 +300,14 @@ public class Resolver
 			}
 		}
 
+		/*
 		if (namespaceToAdd == null) // Global function
 		{
 			m_environment.Define(identifier.Name.Lexeme, Variant.Create(identifier));
 		}
 		else
+		*/
+
 		{
 			namespaceToAdd.AddIdentifier(identifier);
 		}
@@ -463,9 +473,20 @@ public class Resolver
 			var foundUsing = false;
 			var foundUsings = scope NamespaceList();
 			var foundUsingName = default(Token);
+
+			/*
+			let usings = scope List<Stmt.Using>();
+			/*for (let ns in m_currentNamespace.List)
+			{
+				usings.Add(scope:: .(ns));
+			}*/
+			usings.AddRange(m_currentUsings);
+			*/
+
 			for (let @using in m_currentUsings)
 			{
-				if (m_environment.Get(@using.Name) case .Ok)
+				let usingCheckKey = scope $"{@using.Name.Lexeme}::{namespaceKey}";
+				if (m_environment.Get(usingCheckKey) case .Ok)
 				{
 					if (foundUsing)
 					{
@@ -495,9 +516,10 @@ public class Resolver
 				temp.AddRange(expr.Namespaces);
 
 				let tempStr = temp.NamespaceListToString(.. scope .());
+
 				if (m_environment.Get(tempStr) case .Ok)
 				{
-					ambigRefError!(foundUsings[0], m_currentNamespace.Front);
+					// ambigRefError!(foundUsings[0], m_currentNamespace.Front);
 				}
 				else
 				{
@@ -507,8 +529,7 @@ public class Resolver
 		}
 		else
 		{
-			// If it isn't global, we can cheat and just add the current push the current namespace so the compiler-
-			// thinks it's part of the namespace.
+			// If it is global, we can cheat and just add the current push the current namespace so the compiler thinks it's part of the namespace.
 			//
 			// We've already checked for duplicates earlier in the identifier definition.
 			addNamespaceToExpr(m_currentNamespace.Front);

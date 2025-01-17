@@ -2,18 +2,18 @@ using System;
 
 namespace Sandbox;
 
+public const double PI = 3.14159265358979323846;
+
 public fun void Main()
 {
 	/*
 	let string_view constant = "Hello from Zen!!!";
 	var int mutable = 0;
 	let bool boolean = false;
-
-
 	*/
 
 	let double pi = Math::PI;
-
+	let double pi2 = PI;
 
 	Player::Update();
 	Player::Draw();

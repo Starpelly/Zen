@@ -14,7 +14,7 @@ public abstract class Expr
 
 	public interface IHaveNamespaces
 	{
-		public NamespaceList Namespaces { get; }
+		public NamespaceList Namespaces { get; set; }
 	}
 
 	public class Binary : Expr
@@ -34,16 +34,11 @@ public abstract class Expr
 	public class Variable : Expr, IHaveNamespaces
 	{
 		public Token Name { get; }
-		public NamespaceList Namespaces { get; private set; } ~ delete _;
+		public NamespaceList Namespaces { get; set; } ~ delete _;
 
 		public this(Token name, NamespaceList namespaces)
 		{
 			this.Name = name;
-			this.Namespaces = namespaces;
-		}
-
-		public void SetNamespaces(NamespaceList namespaces)
-		{
 			this.Namespaces = namespaces;
 		}
 	}
@@ -53,7 +48,7 @@ public abstract class Expr
 		public Expr.Variable Callee { get; } ~ delete _;
 		public Token Paren { get; }
 		public List<Expr> Arguments { get; } ~ DeleteContainerAndItems!(_);
-		public NamespaceList Namespaces { get; } ~ delete _;
+		public NamespaceList Namespaces { get; set; } ~ delete _;
 
 		public this(Expr.Variable callee, Token paren, List<Expr> arguments, NamespaceList namespaces)
 		{

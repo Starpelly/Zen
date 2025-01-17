@@ -51,6 +51,10 @@ public class Resolver
 			simpleError!("Cannot return from top-level code.");
 			break;
 
+		case .NO_CURRENT_NAMESPACE:
+			simpleError!("Identifiers cannot be defined without a namespace.");
+			break;
+
 		case .IDENTIFIER_NOT_FOUND:
 			simpleError!(scope $"Identifier '{token.Lexeme}' not found.");
 			break;
@@ -293,24 +297,12 @@ public class Resolver
 		}
 		else
 		{
-			if (m_environment.Get(identifier.Name) case .Ok(let val))
-			{
-				ThrowError(.IDENTIFIER_ALREADY_DEFINED, identifier.Name);
-				return;
-			}
+			ThrowError(.NO_CURRENT_NAMESPACE, identifier.Name);
+			delete identifier;
+			return;
 		}
 
-		/*
-		if (namespaceToAdd == null) // Global function
-		{
-			m_environment.Define(identifier.Name.Lexeme, Variant.Create(identifier));
-		}
-		else
-		*/
-
-		{
-			namespaceToAdd.AddIdentifier(identifier);
-		}
+		namespaceToAdd.AddIdentifier(identifier);
 	}
 
 	private void visitFunctionStmtDefinition(Stmt.Function stmt)
@@ -432,6 +424,9 @@ public class Resolver
 
 	private Result<TIdentifier> zenIdentifierExistCheck<TIdentifier, TExpr>(TExpr expr, Token name) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
 	{
+		if (expr.Namespaces == null)
+			expr.Namespaces = new .();
+
 		void addNamespaceToExpr(Token namespaceToken)
 		{
 			expr.Namespaces.AddFront(namespaceToken);
@@ -515,16 +510,18 @@ public class Resolver
 				temp.AddFront(m_currentNamespace.Front);
 				temp.AddRange(expr.Namespaces);
 
+				/*
 				let tempStr = temp.NamespaceListToString(.. scope .());
-
 				if (m_environment.Get(tempStr) case .Ok)
 				{
 					// ambigRefError!(foundUsings[0], m_currentNamespace.Front);
 				}
 				else
 				{
-					addNamespaceToExpr(foundUsingName);
 				}
+				*/
+
+				addNamespaceToExpr(foundUsingName);
 			}
 		}
 		else

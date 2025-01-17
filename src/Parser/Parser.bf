@@ -545,7 +545,8 @@ public class Parser
 			{
 				if (let variable = expr as Expr.Variable)
 				{
-					variable.SetNamespaces(namespaces);
+					variable.Namespaces = namespaces;
+					// variable.SetNamespaces(namespaces);
 				}
 				break;
 			}

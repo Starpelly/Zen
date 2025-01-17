@@ -36,7 +36,6 @@ public class Transpiler
 		// ----------------------------------
 
 		m_outputH.AppendBannerAutogen();
-		m_outputH.AppendEmptyLine();
 
 		m_outputH.AppendLine("#pragma once");
 		m_outputH.AppendEmptyLine();
@@ -82,18 +81,20 @@ public class Transpiler
 						funcName.Append(fun.Name.Lexeme);
 					}
 
-					m_outputH.Append(scope $"{fun.Type.Name} {funcName}");
-					m_outputH.Append("(");
+					let line = scope String();
+
+					line.Append(scope $"{fun.Type.Name} {funcName}");
+					line.Append("(");
 					for (let param in fun.Parameters)
 					{
 						if (!param.Mutable)
-							m_outputH.Append("const ");
-						m_outputH.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
+							line.Append("const ");
+						line.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
 						if (param != fun.Parameters.Back)
-							m_outputH.Append(", ");
+							line.Append(", ");
 					}
-					m_outputH.Append(");");
-					m_outputH.AppendEmptyLine();
+					line.Append(");");
+					m_outputH.AppendLine(line);
 				}
 				else if (statement.GetType() == typeof(Stmt.Struct))
 				{
@@ -104,10 +105,8 @@ public class Transpiler
 		}
 
 		m_outputC.AppendBannerAutogen();
-		m_outputC.AppendEmptyLine();
-
 		m_outputC.AppendLine(scope $"#include {zenHeaderPath}");
-		m_outputC.AppendEmptyLine();
+		m_outputC.AppendBanner("Code");
 
 		// m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
 		// m_outputC.AppendEmptyLine();
@@ -225,8 +224,6 @@ public class Transpiler
 			}
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
-
-			// outLexeme.AppendEmptyLine();
 		}
 
 		if (let block = stmt as Stmt.Block)

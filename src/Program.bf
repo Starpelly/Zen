@@ -18,8 +18,8 @@ class Program
 		public String InputSrcDir = null ~ delete _;
 		public String OutputSrcDir = null ~ delete _;
 		public String OutputBuildDir = null ~ delete _;
-		public bool BuildWithTCC;
-		public bool RunAfterBuild;
+		public bool BuildWithTCC = false;
+		public bool RunAfterBuild = false;
 	}
 
 	public static mixin ToStringViewList(StringSplitEnumerator e, List<StringView> into)

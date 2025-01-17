@@ -20,4 +20,7 @@ public fun void Main()
 
 	Console::WriteLine("Hello, Sailor!");
 	// Console::TestMessageBox("Hello, World!", "Title");
+	// MiniaudioTest("C:/Users/Braedon/Music/JuniTrance.wav");
+
+	Raylib::PlayRaylib();
 }

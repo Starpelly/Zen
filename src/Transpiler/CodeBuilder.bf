@@ -8,6 +8,7 @@ public class CodeBuilder
 
 	private String m_code = new .() ~ delete _;
 	private int m_tabCount;
+	private int m_line = 0;
 
 	public void IncreaseTab()
 	{
@@ -26,20 +27,27 @@ public class CodeBuilder
 
 	public void AppendLine(StringView text)
 	{
+		AppendNewLine();
 		AppendTabs();
-		m_code.Append(text);
-		m_code.Append('\n');
+		Append(text);
+	}
+
+	public void AppendNewLine()
+	{
+		if (m_line > 0) m_code.Append('\n');
+		m_line++;
 	}
 
 	public void AppendLineIgnoreTabs(StringView text)
 	{
+		if (m_line > 0) m_code.Append('\n');
 		m_code.Append(text);
-		m_code.Append('\n');
+		m_line++;
 	}
 
 	public void AppendEmptyLine()
 	{
-		m_code.Append('\n');
+		AppendLine("");
 	}
 
 	public void AppendTabs()
@@ -65,5 +73,6 @@ public class CodeBuilder
 	public void Clear()
 	{
 		m_code.Clear();
+		m_line = 0;
 	}
 }

@@ -13,7 +13,6 @@ public class StandardLib
 		defer outString.Append(builder.Code);
 
 		builder.AppendBannerAutogen();
-		builder.AppendEmptyLine();
 
 		builder.AppendLine("#pragma once");
 		builder.AppendEmptyLine();
@@ -45,7 +44,6 @@ public class StandardLib
 		defer outString.Append(builder.Code);
 
 		builder.AppendBannerAutogen();
-		builder.AppendEmptyLine();
 
 		builder.AppendLine("#pragma once");
 		builder.AppendEmptyLine();

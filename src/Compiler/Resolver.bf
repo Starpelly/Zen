@@ -277,7 +277,7 @@ public class Resolver
 		m_currentNamespace = stmt;
 	}
 
-	private mixin AddIdentifier(Identifier identifier)
+	private void AddIdentifier(Identifier identifier)
 	{
 		ZenNamespace namespaceToAdd = null;
 		if (m_currentNamespace != null)
@@ -308,13 +308,13 @@ public class Resolver
 	private void visitFunctionStmtDefinition(Stmt.Function stmt)
 	{
 		let fun = new ZenFunction(stmt);
-		AddIdentifier!(fun);
+		AddIdentifier(fun);
 	}
 
 	private void visitConstStmtDefinition(Stmt.Const stmt)
 	{
 		let @const = new ZenConst(stmt);
-		AddIdentifier!(@const);
+		AddIdentifier(@const);
 	}
 
 	private void visitFunctionStmtBody(Stmt.Function stmt)

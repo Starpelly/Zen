@@ -122,7 +122,6 @@ public class Transpiler
 		return (m_outputH.Code, m_outputC.Code);
 	}
 
-	[Inline]
 	private static void writeNamespace(String outStr, Stmt.Namespace ns)
 	{
 		if (ns == null) return;
@@ -130,7 +129,6 @@ public class Transpiler
 		writeNamespace(outStr, ns.List);
 	}
 
-	[Inline]
 	private static void writeNamespace(String outStr, NamespaceList tokens)
 	{
 		for (let token in tokens)
@@ -139,7 +137,6 @@ public class Transpiler
 		}
 	}
 
-	[Inline]
 	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
 	{
 		// outLexeme.AppendTabs();
@@ -228,10 +225,14 @@ public class Transpiler
 
 		if (let block = stmt as Stmt.Block)
 		{
+			outLexeme.AppendLine("{");
+			outLexeme.IncreaseTab();
 			for (let blockStatement in block.Statements)
 			{
 				stmtToString(ref outLexeme, blockStatement);
 			}
+			outLexeme.DecreaseTab();
+			outLexeme.AppendLine("}");
 		}
 
 		if (let expr = stmt as Stmt.Expression)
@@ -275,13 +276,7 @@ public class Transpiler
 			let args = expressionToString(.. scope .(), @if.Condition);
 			outLexeme.AppendLine(scope $"if ({args})");
 
-			outLexeme.AppendLine("{");
-			outLexeme.IncreaseTab();
-			{
-				stmtToString(ref outLexeme, @if.ThenBranch);
-			}
-			outLexeme.DecreaseTab();
-			outLexeme.AppendLine("}");
+			stmtToString(ref outLexeme, @if.ThenBranch);
 		}
 
 		if (let @while = stmt as Stmt.While)
@@ -289,13 +284,7 @@ public class Transpiler
 			let args = expressionToString(.. scope .(), @while.Condition);
 			outLexeme.AppendLine(scope $"while ({args})");
 
-			outLexeme.AppendLine("{");
-			outLexeme.IncreaseTab();
-			{
-				stmtToString(ref outLexeme, @while.Body);
-			}
-			outLexeme.DecreaseTab();
-			outLexeme.AppendLine("}");
+			stmtToString(ref outLexeme, @while.Body);
 		}
 
 		if (let cembed = stmt as Stmt.CEmbed)
@@ -313,7 +302,6 @@ public class Transpiler
 		}
 	}
 
-	[Inline]
 	private void expressionToString(String outLexeme, Expr expr)
 	{
 		if (let variable = expr as Expr.Variable)
@@ -382,6 +370,12 @@ public class Transpiler
 			let value = expressionToString(.. scope .(), assign.Value);
 
 			outLexeme.Append(scope $"{identity} = {value}");
+		}
+
+		if (let unary = expr as Expr.Unary)
+		{
+			let right = expressionToString(.. scope .(), unary.Right);
+			outLexeme.Append(scope $"{unary.Operator.Lexeme}{right}");
 		}
 	}
 }

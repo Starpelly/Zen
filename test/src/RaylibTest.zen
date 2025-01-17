@@ -6,6 +6,7 @@ cembed("""
 
 public fun void PlayRaylib()
 {
+    /*
     cembed("""
     const int screenWidth = 800;
     const int screenHeight = 450;
@@ -27,6 +28,27 @@ public fun void PlayRaylib()
 
     CloseWindow();
     """);
+    */
+
+    let int screenWidth = 800;
+    let int screenHeight = 450;
+
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+
+    while (!WindowShouldClose())
+	{
+		BeginDrawing();
+        {   
+            cembed("""
+            ClearBackground(RAYWHITE);
+            DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
+            DrawCircle(GetMouseX(), GetMouseY(), 32, RED);
+            """);
+        }
+        EndDrawing();
+	}
+
+    CloseWindow();
 }
 
 public fun void InitWindow(let int width, let int height, let string_view title)
@@ -48,4 +70,14 @@ public fun bool WindowShouldClose()
 public fun void CloseWindow()
 {
     cembed("CloseWindow();");
+}
+
+public fun void BeginDrawing()
+{
+    cembed("BeginDrawing();");
+}
+
+public fun void EndDrawing()
+{
+    cembed("EndDrawing();");  
 }

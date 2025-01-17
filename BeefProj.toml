@@ -5,7 +5,7 @@ Name = "Zen"
 StartupObject = "Zen.Program"
 
 [Configs.Debug.Win64]
-DebugCommandArguments = "-workspace=$(WorkspaceDir)/test -tcc -run"
+DebugCommandArguments = "-workspace=$(WorkspaceDir)/test"
 
 [Configs.Release.Win64]
 PostBuildCmds = ["CopyFilesIfNewer(\"$(ProjectDir)/vendor/libtcc/vendor/tcc\", \"$(BuildDir)\")"]

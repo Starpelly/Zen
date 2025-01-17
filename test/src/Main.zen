@@ -18,6 +18,6 @@ public fun void Main()
 	Player::Update();
 	Player::Draw();
 
-	// Console::WriteLine(constant);
+	Console::WriteLine("Hello, Sailor!");
 	// Console::TestMessageBox("Hello, World!", "Title");
 }

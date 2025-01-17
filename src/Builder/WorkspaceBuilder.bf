@@ -122,9 +122,9 @@ public class WorkspaceBuilder
 	public void Run()
 	{
 		// Lexing + Parsing
-		let relPath = scope String();
 		void recurseParseFiles(StringView path)
 		{
+			let relPath = scope String();
 			if (path != m_workspaceDir)
 			{
 				relPath.Append(Path.GetFileName(path, .. scope .()));

@@ -109,8 +109,8 @@ public class Transpiler
 		m_outputC.AppendLine(scope $"#include {zenHeaderPath}");
 		m_outputC.AppendEmptyLine();
 
-		m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
-		m_outputC.AppendEmptyLine();
+		// m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
+		// m_outputC.AppendEmptyLine();
 
 		for (let statement in Statements)
 		{

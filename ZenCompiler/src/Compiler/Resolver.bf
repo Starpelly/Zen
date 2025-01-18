@@ -174,17 +174,21 @@ public class Resolver
 		}
 	}
 
-	private void resolveExpr(Expr expression)
+	private void resolveExpr(Expr expr)
 	{
-		if (let call = expression as Expr.Call)
+		if (let call = expr as Expr.Call)
 		{
 			visitCallExpr(call);
 		}
-		if (let variable = expression as Expr.Variable)
+		if (let variable = expr as Expr.Variable)
 		{
 			visitVariableExpr(variable);
 		}
-		if (let assign = expression as Expr.Assign)
+		if (let binary = expr as Expr.Binary)
+		{
+			visitBinaryExpr(binary);
+		}
+		if (let assign = expr as Expr.Assign)
 		{
 			visitAssignExpr(assign);
 		}
@@ -784,6 +788,10 @@ public class Resolver
 		}
 
 		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
+	}
+
+	private void visitBinaryExpr(Expr.Binary expr)
+	{
 	}
 
 	private void visitAssignExpr(Expr.Assign expr)

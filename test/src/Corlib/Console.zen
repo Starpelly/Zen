@@ -3,9 +3,6 @@ namespace System::Console;
 // cinclude "<stdio.h>";
 cembed("#include <stdio.h>");
 cembed("#include <windows.h>");
-cembed("""
-//
-""");
 
 public fun void WriteLine(let string_view text)
 {

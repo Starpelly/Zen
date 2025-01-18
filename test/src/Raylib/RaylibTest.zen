@@ -71,3 +71,8 @@ public fun Raylib::Vector2 GetMousePosition()
     return *(Raylib_Vector2*)&vec;
     """);
 }
+
+public fun float GetFrameTime()
+{
+    cembed("return GetFrameTime();");
+}

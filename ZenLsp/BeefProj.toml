@@ -1,0 +1,13 @@
+FileVersion = 1
+Dependencies = {corlib = "*", Zen = "*", corlib = "*"}
+
+[Project]
+Name = "ZenLsp"
+StartupObject = "ZenLsp.Program"
+ProcessorMacros = ["CLI"]
+
+[Configs.Debug.Win64]
+OtherLinkFlags = "$(LinkFlags) Comdlg32.lib kernel32.lib user32.lib advapi32.lib shell32.lib Rpcrt4.lib Ole32.lib"
+CLibType = "Dynamic"
+BeefLibType = "DynamicDebug"
+DebugCommandArguments = "--port=5556"

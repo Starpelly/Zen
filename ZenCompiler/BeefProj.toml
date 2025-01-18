@@ -1,8 +1,10 @@
 FileVersion = 1
+Dependencies = {corlib = "*", corlib = "*"}
 
 [Project]
 Name = "Zen"
 StartupObject = "Zen.Program"
+ProcessorMacros = ["CLI"]
 
 [Configs.Debug.Win64]
 DebugCommandArguments = "-workspace=$(WorkspaceDir)/test"

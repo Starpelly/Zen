@@ -9,6 +9,7 @@
   "categories": [
     "Programming Languages"
   ],
+  "main": "./out/extension.js",
   "contributes": {
     "languages": [{
       "id": "zen",
@@ -21,5 +22,18 @@
       "scopeName": "source.zen",
       "path": "./syntaxes/zen.tmLanguage.json"
     }]
+  },
+  "scripts": {
+    "vscode:prepublish": "node build.mjs -p",
+    "compile": "node build.mjs",
+    "watch": "node build.mjs -w"
+  },
+  "devDependencies": {
+    "@types/node": "14.x",
+    "@types/vscode": "^1.71.0",
+    "typescript": "^4.8.3",
+    "vscode-languageclient": "^8.0.2",
+    "esbuild": "^0.15.7",
+    "chokidar": "^3.5.3"
   }
 }

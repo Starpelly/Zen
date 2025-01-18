@@ -44,3 +44,20 @@ public fun void DrawText(let string_view text, let int x, let int y, let int fon
 {
     cembed("DrawText(text, x, y, font_size, CLITERAL(Color){ color.r, color.g, color.b, color.a });");
 }
+
+public fun void DrawRectangleV(let Vector2 position, let Vector2 size, let Color color)
+{
+    cembed("""
+    const Vector2 pos = CLITERAL(Vector2) { position.x, position.y };
+    const Vector2 sizee = CLITERAL(Vector2) { size.x, size.y };
+    const Color colorr = CLITERAL(Color){ color.r, color.g, color.b, color.a };
+    DrawRectangleV(pos, sizee, colorr);
+    """);
+}
+
+public fun bool IsMouseButtonDown(let int button)
+{
+    cembed("""
+    return IsMouseButtonDown(button);
+    """);
+}

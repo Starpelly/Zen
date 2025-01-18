@@ -7,7 +7,7 @@ public struct Color
     public var uint8 b;
     public var uint8 a;
     
-    public fun self(let int r, let int g, let int b, let int a)
+    public fun self(let uint8 r, let uint8 g, let uint8 b, let uint8 a)
     {
         cembed("""
         return CLITERAL(Raylib_Color) { r, g, b, a };
@@ -16,5 +16,18 @@ public struct Color
         // self.g = g;
         // self.b = b;
         // self.a = a;
+    }
+}
+
+public struct Vector2
+{
+    public var float x;
+    public var float y;
+
+    public fun self(let float x, let float y)
+    {
+        cembed("""
+        return CLITERAL(Raylib_Vector2) { x, y };
+        """);
     }
 }

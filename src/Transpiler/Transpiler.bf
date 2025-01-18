@@ -325,6 +325,13 @@ public class Transpiler
 			outLexeme.AppendLine(scope $"if ({args})");
 
 			stmtToString(ref outLexeme, @if.ThenBranch);
+
+			if (@if.ElseBranch != null)
+			{
+				outLexeme.AppendLine(scope $"else");
+
+				stmtToString(ref outLexeme, @if.ElseBranch);
+			}
 		}
 
 		if (let @while = stmt as Stmt.While)

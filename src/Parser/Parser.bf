@@ -96,29 +96,39 @@ public class ParseError : Zen.Builder.ICompilerError
 
 public class Parser
 {
-	private static List<StringView> PrimitiveDataTypes = new .()
+
+	public enum PrimitiveType
 	{
-		"void",
+		Void = 0,
+		Integer = 1,
+		Float = _*2,
+		Double = _*2,
+		Boolean = _*2,
+		StringView = _*2
+	}
 
-		"int",
-		"int8",
-		"int16",
-		"int32",
-		"int64",
+	public static Dictionary<StringView, PrimitiveType> PrimitiveDataTypes { get; private set; } = new .()
+	{
+		("void", 			.Void),
 
-		"uint",
-		"uint8",
-		"uint16",
-		"uint32",
-		"uint64",
+		("int", 			.Integer | .Float | .Double),
+		("int8", 			.Integer | .Float | .Double),
+		("int16", 			.Integer | .Float | .Double),
+		("int32", 			.Integer | .Float | .Double),
+		("int64", 			.Integer | .Float | .Double),
 
-		"float",
-		"double",
+		("uint", 			.Integer | .Float | .Double),
+		("uint8", 			.Integer | .Float | .Double),
+		("uint16", 			.Integer | .Float | .Double),
+		("uint32", 			.Integer | .Float | .Double),
+		("uint64", 			.Integer | .Float | .Double),
 
-		"bool",
+		("float", 			.Float | .Integer),
+		("double", 			.Double),
 
-		"string_view",
+		("bool", 			.Boolean),
 
+		("string_view", 	.StringView),
 	} ~ delete _;
 
 	private List<Stmt> m_statements;
@@ -205,20 +215,36 @@ public class Parser
 		return new Stmt.Expression(expr);
 	}
 
-	private DataType GetDataTypeFromToken(Token typeToken)
+	public static DataType GetDataTypeFromTypeToken(Token typeToken)
 	{
 		DataType paramType;
 
-		if (PrimitiveDataTypes.Contains(typeToken.Lexeme))
+		if (PrimitiveDataTypes.ContainsKey(typeToken.Lexeme))
 		{
 			paramType = new PrimitiveDataType(typeToken);
-		}
-		else
-		{
-			paramType = new NonPrimitiveDataType(typeToken);
+			return paramType;
 		}
 
+		paramType = new NonPrimitiveDataType(typeToken);
 		return paramType;
+	}
+
+	/// @Note - this should also work for non primitive data types, but it doesn't right now.
+	public static bool CompareDataTypes(DataType a, DataType b)
+	{
+		if (!(a is PrimitiveDataType && b is PrimitiveDataType))return false;
+
+		let aType = a as PrimitiveDataType;
+		let bType = b as PrimitiveDataType;
+
+		let aFlags = PrimitiveDataTypes[aType.Name];
+		let bFlags = PrimitiveDataTypes[bType.Name];
+		if (bFlags.HasFlag(aFlags))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	// ----------------------------------------------------------------
@@ -331,7 +357,7 @@ public class Parser
 				let pType = consume(.Identifier, "Expected parameter type.");
 				let pName = consume(.Identifier, "Expected parameter name.");
 
-				let paramType = GetDataTypeFromToken(pType);
+				let paramType = GetDataTypeFromTypeToken(pType);
 
 				parameters.Add(new .(pName, paramType, null, (accessor.Type == .Var)));
 			} while(match(.Comma));
@@ -340,7 +366,7 @@ public class Parser
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		let funcType = GetDataTypeFromToken(type);
+		let funcType = GetDataTypeFromTypeToken(type);
 		var retFunc = new Stmt.Function(kind, name, funcType, parameters, m_currentNamespace);
 
 		let lastFunc = m_currentFunction;
@@ -460,7 +486,7 @@ public class Parser
 
 	private Stmt.Variable VariableDeclaration(bool mutable)
 	{
-		let type = consume(.Identifier, "Expected variable type.");
+		let type = consumeDataType();
 		let name = consume(.Identifier, "Expected variable name.");
 
 		Expr initializer = null;
@@ -475,14 +501,14 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after variable declaration.");
 
-		let varType = GetDataTypeFromToken(type);
+		// let varType = GetDataTypeFromTypeToken(type);
 		// let inferredType = Token(.Integer, )
-		return new Stmt.Variable(name, varType, initializer, mutable);
+		return new Stmt.Variable(name, type, initializer, mutable);
 	}
 
 	private Stmt.Const ConstDeclaration()
 	{
-		let type = consume(.Identifier, "Expected const type.");
+		let type = consumeDataType();
 		let name = consume(.Identifier, "Expected const name.");
 
 		Expr initializer = null;
@@ -497,8 +523,7 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after const declaration.");
 
-		let constType = GetDataTypeFromToken(type);
-		return new Stmt.Const(name, constType, initializer, m_currentNamespace);
+		return new Stmt.Const(name, type, initializer, m_currentNamespace);
 	}
 
 	// ----------------------------------------------------------------
@@ -745,6 +770,27 @@ public class Parser
 	// ----------------------------------------------------------------
 	// Parsing helper functions
 	// ----------------------------------------------------------------
+
+	private DataType consumeDataType()
+	{
+		let namespaces = scope NamespaceList();
+		var identifier = default(Token);
+
+		repeat
+		{
+			identifier = consume(.Identifier, "Expected variable type.");
+			namespaces.Add(identifier);
+		} while (match(.DoubleColon));
+
+		namespaces.PopBack();
+		let dataType = Parser.GetDataTypeFromTypeToken(identifier);
+		if (let nonPrim = dataType as NonPrimitiveDataType)
+		{
+			nonPrim.SetNamespace(namespaces);
+		}
+
+		return dataType;
+	}
 
 	private Token consume(TokenType type, String message)
 	{

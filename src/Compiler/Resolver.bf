@@ -236,13 +236,7 @@ public class Resolver
 		{
 			if (let literal = expr as Expr.Literal)
 			{
-				// Temp hack fix, there needs to be a system for this.
-				if ((a.Name == "string" && literal.Type.Name == "string_view") ||
-					(a.Name == "string_view" && literal.Type.Name == "string"))
-				{
-							
-				}
-				else
+				if (!Parser.CompareDataTypes(a, b))
 				{
 					ThrowError(.IMPLICIT_CAST_INVALID, a.Token, literal.Type.Name, a.Name);
 				}
@@ -727,9 +721,26 @@ public class Resolver
 					}
 					else if (let literal = argument as Expr.Literal)
 					{
-						if (parameter.Type.Name != literal.Type.Name)
+						// Compare the input parameter to the function argument.
+						if (let type = Parser.GetDataTypeFromTypeToken(parameter.Type.Token))
 						{
-							ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
+							defer delete type;
+							if (let prim = type as PrimitiveDataType)
+							{
+								let otherType = Parser.GetDataTypeFromTypeToken(prim.Token);
+								defer delete otherType;
+								if (!Parser.CompareDataTypes(type, otherType))
+								{
+									ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
+								}
+							}
+							else
+							{
+								if (parameter.Type.Name != literal.Type.Name)
+								{
+									ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
+								}
+							}
 						}
 					}
 					else if (let call = argument as Expr.Call)

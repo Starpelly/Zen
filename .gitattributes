@@ -2,3 +2,5 @@
 * text=auto
 
 *.bat linguist-language=Beef
+*.js linguist-language=TypeScript
+*.mjs linguist-language=TypeScript

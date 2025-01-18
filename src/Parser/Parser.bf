@@ -304,7 +304,7 @@ public class Parser
 	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
 	{
 		var kind;
-		Token type;
+		DataType type;
 		Token name;
 
 		if (m_currentFunction == null)
@@ -321,13 +321,15 @@ public class Parser
 
 		if (check(.Self))
 		{
-			type = consume(.Self, scope $"Expected {kind} type.");
-			name = type;
+			let selfType = consume(.Self, scope $"Expected {kind} type.");
+			type = GetDataTypeFromTypeToken(selfType);
+			name = selfType;
 			kind = .Constructor;
 		}
 		else
 		{
-			type = consume(.Identifier, scope $"Expected {kind} type.");
+			// type = consume(.Identifier, scope $"Expected {kind} type.");
+			type = consumeDataType();
 			name = consume(.Identifier, scope $"Expected {kind} name.");
 			
 			if (name.Lexeme == "Main" && kind != .LocalFunction)
@@ -366,8 +368,7 @@ public class Parser
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		let funcType = GetDataTypeFromTypeToken(type);
-		var retFunc = new Stmt.Function(kind, name, funcType, parameters, m_currentNamespace);
+		var retFunc = new Stmt.Function(kind, name, type, parameters, m_currentNamespace);
 
 		let lastFunc = m_currentFunction;
 		m_currentFunction = retFunc;
@@ -546,12 +547,15 @@ public class Parser
 
 			if (let varExpr = expr as Expr.Variable)
 			{
-				let name = varExpr.Name;
-				delete varExpr; // @Sus
-				return new Expr.Assign(name, value);
+				return new Expr.Assign(varExpr, value);
+			}
+			if (let getExpr = expr as Expr.Get)
+			{
+				return new Expr.Assign(getExpr, value);
 			}
 
 			reportError(equals, "Invalid assignment target.");
+			delete expr;
 		}
 
 		return expr;

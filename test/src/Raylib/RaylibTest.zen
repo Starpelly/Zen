@@ -61,3 +61,13 @@ public fun bool IsMouseButtonDown(let int button)
     return IsMouseButtonDown(button);
     """);
 }
+
+public fun Raylib::Vector2 GetMousePosition()
+{
+    // Not guarenteed to work on all compilers.
+    // So this shouldn't be standardized.
+    cembed("""
+    const Vector2 vec = GetMousePosition();
+    return *(Raylib_Vector2*)&vec;
+    """);
+}

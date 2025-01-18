@@ -9,3 +9,4 @@ DebugCommandArguments = "-workspace=$(WorkspaceDir)/test"
 
 [Configs.Release.Win64]
 PostBuildCmds = ["CopyFilesIfNewer(\"$(ProjectDir)/vendor/libtcc/vendor/tcc\", \"$(BuildDir)\")"]
+DebugCommandArguments = "-workspace=$(WorkspaceDir)/test"

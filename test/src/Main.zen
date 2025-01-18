@@ -17,11 +17,10 @@ public fun void RunGame()
     let int screenWidth = 800;
     let int screenHeight = 450;
 
-    var float x = 640;
-    var Raylib::Vector2 position = Raylib::Vector2(640, 360);
+    var Raylib::Vector2 position = Raylib::Vector2(640, 320);
 
     Raylib::InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
-    Raylib::SetTargetFPS(60);
+    // Raylib::SetTargetFPS(60);
 
     while (!Raylib::WindowShouldClose())
 	{
@@ -30,16 +29,17 @@ public fun void RunGame()
             Raylib::ClearBackground(Raylib::Color(245, 245, 245, 255));
             Raylib::DrawText("Hello from Zen!", 190, 200, 20, Raylib::Color(140, 140, 140, 255));
             
-            Raylib::DrawRectangleV(Raylib::Vector2(position.x, 320), Raylib::Vector2(64, 64), Raylib::Color(0, 0, 0, 255));
+            Raylib::DrawRectangleV(Raylib::Vector2(position.x, position.y), Raylib::Vector2(64, 64), Raylib::Color(0, 0, 0, 255));
 
-            if (Raylib::IsMouseButtonDown(0))
-            {
-                x = x + 1;
+            position = Raylib::GetMousePosition();
+            position.x = 32;
+            /*
+            if (Raylib::IsMouseButtonDown(0)) {
+                position.y = 0;
+            } else {
+                position.y = 320;
             }
-            else
-            {
-                x = x - 1;
-            }
+            */
         }
         Raylib::EndDrawing();
 	}

@@ -135,10 +135,10 @@ public abstract class Expr
 
 	public class Assign : Expr
 	{
-		public Token Name { get; }
+		public Expr Name { get; } ~ delete _;
 		public Expr Value { get; } ~ delete _;
 
-		public this(Token name, Expr value)
+		public this(Expr name, Expr value)
 		{
 			this.Name = name;
 			this.Value = value;

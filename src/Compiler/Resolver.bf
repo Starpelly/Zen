@@ -461,11 +461,11 @@ public class Resolver
 			if (nonPrim.Namespace == null)
 				nonPrim.Namespace = new .();
 
-			let nn = scope NamespaceList();
-			if (ZenIdentifierExistCheck<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, nn, true) case .Ok(let zenConst))
+			let _ = scope NamespaceList();
+			if (ZenIdentifierExistCheck<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenConst))
 			{
 				nonPrim.Namespace.Clear();
-				nonPrim.Namespace.AddRange(nn);
+				nonPrim.Namespace.AddRange(_);
 			}
 		}
 	}
@@ -788,22 +788,63 @@ public class Resolver
 
 	private void visitAssignExpr(Expr.Assign expr)
 	{
-		if (findIdentifierStmt<Stmt.Variable>(expr.Name) case .Ok(let identifier))
+		if (let @var = expr.Name as Expr.Variable)
 		{
-			if (!identifier.Mutable)
+			if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let identifier))
 			{
-				ThrowError(.VARIABLE_ASSIGNMENT_IMMUTABLE, expr.Name, identifier.Name.Lexeme);
-				return;
-			}
+				if (!identifier.Mutable)
+				{
+					ThrowError(.VARIABLE_ASSIGNMENT_IMMUTABLE, @var.Name, identifier.Name.Lexeme);
+					return;
+				}
 
-			if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
+				if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
+				{
+					compareAndCheckTypes(expr.Value, identifier.Type, typeB);
+				}
+			}
+			else
 			{
-				compareAndCheckTypes(expr.Value, identifier.Type, typeB);
+				ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
 			}
 		}
-		else
+		else if (let get = expr.Name as Expr.Get)
 		{
-			ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
+			resolveExpr(get.Object);
+
+			// @Note
+			// This is a lot of code, and it's making me uncomfortable...
+			if (let @var = get.Object as Expr.Variable)
+			{
+				if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let variable))
+				{
+					if (!variable.Mutable)
+					{
+						ThrowError(.VARIABLE_ASSIGNMENT_IMMUTABLE, @var.Name, variable.Name.Lexeme);
+						return;
+					}
+
+					if (let nonPrim = variable.Type as NonPrimitiveDataType)
+					{
+						let _ = scope NamespaceList();
+						if (ZenIdentifierExistCheck<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenStruct))
+						{
+							// Structs should probably store these...
+							for (let statement in zenStruct.Declaration.Body.Statements)
+							{
+								if (let structVar = statement as Stmt.Variable)
+								{
+									let typeA = structVar.Type;
+									if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
+									{
+										compareAndCheckTypes(expr.Value, typeA, typeB);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
 		resolveExpr(expr.Value);

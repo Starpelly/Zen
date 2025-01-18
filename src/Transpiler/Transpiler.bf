@@ -421,7 +421,7 @@ public class Transpiler
 
 		if (let assign = expr as Expr.Assign)
 		{
-			let identity = assign.Name.Lexeme;
+			let identity = expressionToString(.. scope .(), assign.Name);
 			let value = expressionToString(.. scope .(), assign.Value);
 
 			outLexeme.Append(scope $"{identity} = {value}");
@@ -431,6 +431,13 @@ public class Transpiler
 		{
 			let right = expressionToString(.. scope .(), unary.Right);
 			outLexeme.Append(scope $"{unary.Operator.Lexeme}{right}");
+		}
+
+		if (let get = expr as Expr.Get)
+		{
+			let object = expressionToString(.. scope .(), get.Object);
+			let name = get.Name.Lexeme;
+			outLexeme.Append(scope $"{object}.{name}");
 		}
 	}
 }

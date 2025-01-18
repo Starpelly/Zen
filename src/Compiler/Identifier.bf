@@ -54,42 +54,21 @@ public class ZenFunction : Identifier
 	}
 }
 
-public class ZenNamespace
+public class ZenStruct : Identifier
 {
-	private readonly Dictionary<StringView, Identifier> m_identifiers = new .() ~ DeleteDictionaryAndValues!(_);
+	private readonly Stmt.Struct m_declaration;
+	public Stmt.Struct Declaration => m_declaration;
 
-	public String Name { get; } ~ delete _;
-
-	public this(Stmt.Namespace @namespace)
+	public this(Stmt.Struct declaration)
 	{
-		this.Name = @namespace.List.NamespaceListToString(.. new .());
+		this.m_declaration = declaration;
 	}
 
-	public this(NamespaceList list)
+	public override Token Name => m_declaration.Name;
+	public override Identifier Bind(ZenNamespace @namespace)
 	{
-		this.Name = list.NamespaceListToString(.. new .());
+		return new Self(m_declaration);
 	}
 
-	public this(String name, Self parent, Dictionary<StringView, Identifier> identifiers)
-	{
-		this.Name = name;
-		this.m_identifiers = identifiers;
-	}
-
-	public bool FindIdentifier<T>(StringView name, out T func) where T : Identifier
-	{
-		if (m_identifiers.TryGetValue(name, let val))
-		{
-			func = (T)val;
-			return true;
-		}
-
-		func = null;
-		return false;
-	}
-
-	public void AddIdentifier(Identifier identifier)
-	{
-		m_identifiers.Add(identifier.Name.Lexeme, identifier);
-	}
+	public ZenFunction Constructor = null ~ delete _;
 }

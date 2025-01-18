@@ -48,58 +48,48 @@ public class Transpiler
 				{
 					let val = expressionToString(.. scope .(), @const.Initializer);
 					let name = scope String();
-					writeNamespace(name, @const.Namespace);
+					WriteNamespace(name, @const.Namespace);
 					name.Append(@const.Name.Lexeme);
 
 					m_outputH.AppendLine(scope $"#define {name} {val}");
 				}
 
+				if (let @struct = statement as Stmt.Struct)
+				{
+					let ns = WriteNamespace(.. scope .(), @struct.Namespace);
+
+					m_outputH.AppendLine(scope $"typedef struct \{");
+					m_outputH.IncreaseTab();
+
+					// Structs in C can only have fields.
+					for (let statement in @struct.Body.Statements)
+					{
+						if (let variable = statement as Stmt.Variable)
+						{
+							stmtToString(ref m_outputH, variable);
+						}
+					}
+
+					m_outputH.DecreaseTab();
+					m_outputH.AppendLine("}");
+					m_outputH.Append(scope $" {ns}{@struct.Name.Lexeme};");
+
+					// Struct methods
+					for (let statement in @struct.Body.Statements)
+					{
+						if (let fun = statement as Stmt.Function)
+						{
+							stmtToStringHeader(ref m_outputH, fun);
+						}
+					}
+
+					if (statement != Statements.Back) // @Speed - slow probably...
+						m_outputH.AppendEmptyLine();
+				}
+
 				if (statement.GetType() == typeof(Stmt.Function))
 				{
-					let fun = ((Stmt.Function)statement);
-					let defNamespace = scope String();
-
-					if (Enviornment.Get(fun.Name) case .Ok(let val) && fun.Kind != .Main)
-					{
-						let ns = (val.Get<ZenFunction>()).Declaration.Namespace;
-						writeNamespace(defNamespace, ns);
-					}
-
-					let funcName = scope String();
-					if (fun.Kind == .Main)
-					{
-						continue;
-						// funcName.Append("main");
-					}
-					else
-					{
-						if (fun.Namespace != null && fun.Kind != .Main)
-						{
-							let ns = writeNamespace(.. scope .(), fun.Namespace);
-							funcName.Append(ns);
-						}
-						funcName.Append(fun.Name.Lexeme);
-					}
-
-					let line = scope String();
-
-					line.Append(scope $"{fun.Type.Name} {funcName}");
-					line.Append("(");
-					for (let param in fun.Parameters)
-					{
-						if (!param.Mutable)
-							line.Append("const ");
-						line.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
-						if (param != fun.Parameters.Back)
-							line.Append(", ");
-					}
-					line.Append(");");
-					m_outputH.AppendLine(line);
-				}
-				else if (statement.GetType() == typeof(Stmt.Struct))
-				{
-					let @struct = ((Stmt.Struct)statement);
-					Console.WriteLine(@struct.Name.Lexeme);
+					stmtToStringHeader(ref m_outputH, statement);
 				}
 			}
 		}
@@ -122,14 +112,14 @@ public class Transpiler
 		return (m_outputH.Code, m_outputC.Code);
 	}
 
-	private static void writeNamespace(String outStr, Stmt.Namespace ns)
+	public static void WriteNamespace(String outStr, Stmt.Namespace ns)
 	{
 		if (ns == null) return;
 
-		writeNamespace(outStr, ns.List);
+		WriteNamespace(outStr, ns.List);
 	}
 
-	private static void writeNamespace(String outStr, NamespaceList tokens)
+	public static void WriteNamespace(String outStr, NamespaceList tokens)
 	{
 		for (let token in tokens)
 		{
@@ -137,10 +127,67 @@ public class Transpiler
 		}
 	}
 
+	public static void WriteType(String outStr, DataType type)
+	{
+		if (let nonPrim = type as NonPrimitiveDataType)
+			WriteNamespace(outStr, nonPrim.Namespace);
+
+		outStr.Append(type.Name);
+	}
+
+	private void stmtToStringHeader(ref CodeBuilder outLexeme, Stmt stmt)
+	{
+		if (let fun = stmt as Stmt.Function)
+		{
+			let funcName = scope String();
+			if (fun.Kind == .Main)
+			{
+				return;
+				// funcName.Append("main");
+			}
+			else
+			{
+				if (fun.Namespace != null && fun.Kind != .Main)
+				{
+					let ns = WriteNamespace(.. scope .(), fun.Namespace);
+					funcName.Append(ns);
+				}
+				funcName.Append(fun.Name.Lexeme);
+			}
+
+			let line = scope String();
+
+			line.Append(scope $"{WriteType(.. scope .(), fun.Type)} {funcName}");
+			line.Append("(");
+			for (let param in fun.Parameters)
+			{
+				if (!param.Mutable)
+					line.Append("const ");
+
+				// let ns = WriteNamespace(.. scope .(), param.Type)
+				line.Append(scope $"{WriteType(.. scope .(), param.Type)} {param.Name.Lexeme}");
+				if (param != fun.Parameters.Back)
+					line.Append(", ");
+			}
+			line.Append(");");
+			m_outputH.AppendLine(line);
+		}
+	}
+
 	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
 	{
 		// outLexeme.AppendTabs();
 
+		if (let @struct = stmt as Stmt.Struct)
+		{
+			for (let statement in @struct.Body.Statements)
+			{
+				if (let fun = statement as Stmt.Function)
+				{
+					stmtToString(ref outLexeme, fun);
+				}
+			}
+		}
 		if (let fun = stmt as Stmt.Function)
 		{
 			let parameters = scope String();
@@ -152,7 +199,7 @@ public class Transpiler
 					parameters.Append("const ");
 				}
 
-				parameters.Append(scope $"{param.Type.Name} {param.Name.Lexeme}");
+				parameters.Append(scope $"{WriteType(.. scope .(), param.Type)} {param.Name.Lexeme}");
 				if (param != fun.Parameters.Back)
 					parameters.Append(", ");
 			}
@@ -160,7 +207,7 @@ public class Transpiler
 			let funcName = scope String();
 			if (fun.Namespace != null && fun.Kind != .Main)
 			{
-				let ns = writeNamespace(.. scope .(), fun.Namespace);
+				let ns = WriteNamespace(.. scope .(), fun.Namespace);
 				funcName.Append(ns);
 			}
 			funcName.Append(fun.Name.Lexeme);
@@ -205,7 +252,7 @@ public class Transpiler
 				funcName.Clear();
 				funcName.Append("main");
 			}
-			outLexeme.AppendLine(scope $"{fun.Type.Name} {funcName}({parameters})");
+			outLexeme.AppendLine(scope $"{WriteType(.. scope .(), fun.Type)} {funcName}({parameters})");
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
@@ -251,7 +298,8 @@ public class Transpiler
 				outStr.Append("const ");
 			}
 
-			outStr.Append(@var.Type.Name);
+			WriteType(outStr, @var.Type);
+			// outStr.Append(@var.Type.Name);
 			outStr.Append(' ');
 			outStr.Append(@var.Name.Lexeme);
 
@@ -307,13 +355,13 @@ public class Transpiler
 		if (let variable = expr as Expr.Variable)
 		{
 			if (variable.Namespaces != null)
-				writeNamespace(outLexeme, variable.Namespaces);
+				WriteNamespace(outLexeme, variable.Namespaces);
 			outLexeme.Append(variable.Name.Lexeme);
 		}
 
 		if (let call = expr as Expr.Call)
 		{
-			let callNamespace = writeNamespace(.. scope .(), call.Namespaces);
+			let callNamespace = WriteNamespace(.. scope .(), call.Namespaces);
 
 			let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
 

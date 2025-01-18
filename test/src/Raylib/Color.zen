@@ -1,0 +1,20 @@
+namespace Raylib;
+
+public struct Color
+{
+    public var uint8 r;
+    public var uint8 g;
+    public var uint8 b;
+    public var uint8 a;
+    
+    public fun self(let int r, let int g, let int b, let int a)
+    {
+        cembed("""
+        return CLITERAL(Raylib_Color) { r, g, b, a };
+        """);
+        // self.r = r;
+        // self.g = g;
+        // self.b = b;
+        // self.a = a;
+    }
+}

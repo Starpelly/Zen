@@ -27,6 +27,7 @@ public class Resolver
 
 	private Stmt.Namespace m_currentNamespace = null;
 	private Stmt.Function m_currentFunction = null;
+	private ZenStruct m_currentStruct = null;
 
 	private readonly List<ResolvingError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
@@ -99,58 +100,75 @@ public class Resolver
 
 	private void resolveDefinitions(List<Stmt> statements)
 	{
-		for (let statement in statements)
+		for (let stmt in statements)
 		{
-			if (let @namespace = statement as Stmt.Namespace)
-			{
-				visitNamespaceStmtDefinition(@namespace);
-			}
-			if (let fun = statement as Stmt.Function)
-			{
-				visitFunctionStmtDefinition(fun);
-			}
-			if (let @const = statement as Stmt.Const)
-			{
-				visitConstStmtDefinition(@const);
-			}
+			resolveStmtDefn(stmt);
 		}
 	}
 
-	private void resolveStmtBody(Stmt statement)
+	private void resolveStmtDefn(Stmt stmt)
 	{
-		if (let @using = statement as Stmt.Using)
+		if (let @namespace = stmt as Stmt.Namespace)
+		{
+			visitNamespaceStmtDefinition(@namespace);
+		}
+		if (let fun = stmt as Stmt.Function)
+		{
+			visitFunctionStmtDefinition(fun);
+		}
+		if (let @const = stmt as Stmt.Const)
+		{
+			visitConstStmtDefinition(@const);
+		}
+		if (let @struct = stmt as Stmt.Struct)
+		{
+			visitStructStmtDefinition(@struct);
+		}
+		if (let @var = stmt as Stmt.Variable)
+		{
+			visitVariableStmtDefinition(@var);
+		}
+	}
+
+	private void resolveStmtBody(Stmt stmt)
+	{
+		if (let @using = stmt as Stmt.Using)
 		{
 			visitUsingStmtBody(@using);
 		}
-		if (let @namespace = statement as Stmt.Namespace)
+		if (let @namespace = stmt as Stmt.Namespace)
 		{
 			visitNamespaceStmtBody(@namespace);
 		}
-		if (let fun = statement as Stmt.Function)
+		if (let fun = stmt as Stmt.Function)
 		{
 			visitFunctionStmtBody(fun);
 		}
-		if (let block = statement as Stmt.Block)
+		if (let block = stmt as Stmt.Block)
 		{
 			visitBlockStmt(block);
 		}
-		if (let @var = statement as Stmt.Variable)
+		if (let @var = stmt as Stmt.Variable)
 		{
-			visitVarStmt(@var);
+			visitVariableStmt(@var);
 		}
-		if (let ret = statement as Stmt.Return)
+		if (let ret = stmt as Stmt.Return)
 		{
 			visitReturnStmt(ret);
 		}
-		if (let expr = statement as Stmt.Expression)
+		if (let expr = stmt as Stmt.Expression)
 		{
 			visitExpressionStmt(expr);
 		}
-		if (let @if = statement as Stmt.If)
+		if (let @if = stmt as Stmt.If)
 		{
 			visitIfStatement(@if);
 		}
-		if (let eof = statement as Stmt.EOF)
+		if (let @while = stmt as Stmt.While)
+		{
+			visitWhileStatement(@while);
+		}
+		if (let eof = stmt as Stmt.EOF)
 		{
 			visitEOFStmt(eof);
 		}
@@ -212,7 +230,7 @@ public class Resolver
 
 	/// Compares two types to see if type 'b' can be implicitly casted to type 'a'.
 	/// This does NOT check the inverse!
-	private void compareAndCheckTypes(Expr expr, ASTType a, ASTType b)
+	private void compareAndCheckTypes(Expr expr, DataType a, DataType b)
 	{
 		if (b != a)
 		{
@@ -238,14 +256,80 @@ public class Resolver
 		}
 	}
 
+	private Result<DataType> GetTypeFromExpr(Expr expr)
+	{
+		if (let literal = expr as Expr.Literal)
+		{
+			return .Ok(literal.Type);
+		}
+		if (let variable = expr as Expr.Variable)
+		{
+			if (findIdentifierStmt<Stmt.Variable>(variable.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Type);
+			}
+		}
+		if (let call = expr as Expr.Call)
+		{
+			if (findIdentifierStmt<Stmt.Function>(call.Callee.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Type);
+			}
+		}
+		return .Err;
+	}
+
+	private void AddIdentifier(Identifier identifier)
+	{
+		ZenNamespace namespaceToAdd = null;
+		if (m_currentNamespace != null)
+		{
+			let stmtNSStr = m_currentNamespace.List.NamespaceListToString(.. scope .());
+			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
+			{
+				namespaceToAdd = @namespace.Get<ZenNamespace>();
+
+				if (namespaceToAdd.FindIdentifier<Identifier>(identifier.Name.Lexeme, let temp))
+				{
+					ThrowError(.IDENTIFIER_ALREADY_DEFINED, identifier.Name);
+					delete identifier;
+					return;
+				}
+			}
+		}
+		else
+		{
+			ThrowError(.NO_CURRENT_NAMESPACE, identifier.Name);
+			delete identifier;
+			return;
+		}
+
+		namespaceToAdd.AddIdentifier(identifier);
+	}
+	
+	private void beginScope()
+	{
+		m_scopes.Add(new .());
+	}
+
+	private void endScope()
+	{
+		let @scope = m_scopes.PopBack();
+		delete @scope;
+	}
+
 	// ----------------------------------------------------------------
-	// Non-expression statements
+	// Using
 	// ----------------------------------------------------------------
 
 	private void visitUsingStmtBody(Stmt.Using stmt)
 	{
 		m_currentUsings.Add(stmt);
 	}
+
+	// ----------------------------------------------------------------
+	// Namespace
+	// ----------------------------------------------------------------
 
 	private void visitNamespaceStmtDefinition(Stmt.Namespace stmt)
 	{
@@ -277,50 +361,35 @@ public class Resolver
 		m_currentNamespace = stmt;
 	}
 
-	private void AddIdentifier(Identifier identifier)
-	{
-		ZenNamespace namespaceToAdd = null;
-		if (m_currentNamespace != null)
-		{
-			let stmtNSStr = m_currentNamespace.List.NamespaceListToString(.. scope .());
-			if (m_environment.Get(stmtNSStr) case .Ok(let @namespace))
-			{
-				namespaceToAdd = @namespace.Get<ZenNamespace>();
+	// ----------------------------------------------------------------
+	// Functions
+	// ----------------------------------------------------------------
 
-				if (namespaceToAdd.FindIdentifier<Identifier>(identifier.Name.Lexeme, let temp))
-				{
-					ThrowError(.IDENTIFIER_ALREADY_DEFINED, identifier.Name);
-					delete identifier;
-					return;
-				}
-			}
+	private ZenFunction visitFunctionStmtDefinition(Stmt.Function stmt)
+	{
+		let fun = new ZenFunction(stmt);
+		if (m_currentStruct != null)
+		{
+			// m_currentStruct.Constructor = fun;
 		}
 		else
 		{
-			ThrowError(.NO_CURRENT_NAMESPACE, identifier.Name);
-			delete identifier;
-			return;
+			AddIdentifier(fun);
 		}
 
-		namespaceToAdd.AddIdentifier(identifier);
-	}
-
-	private void visitFunctionStmtDefinition(Stmt.Function stmt)
-	{
-		let fun = new ZenFunction(stmt);
-		AddIdentifier(fun);
-	}
-
-	private void visitConstStmtDefinition(Stmt.Const stmt)
-	{
-		let @const = new ZenConst(stmt);
-		AddIdentifier(@const);
+		return fun;
 	}
 
 	private void visitFunctionStmtBody(Stmt.Function stmt)
 	{
 		let enclosingFunction = m_currentFunction;
 		m_currentFunction = stmt;
+
+		// Resolve parameters
+		for (let param in stmt.Parameters)
+		{
+			resolveStmtDefn(param);
+		}
 
 		beginScope();
 		{
@@ -336,16 +405,78 @@ public class Resolver
 		m_currentFunction = enclosingFunction;
 	}
 
-	private void visitBlockStmt(Stmt.Block stmt)
+	// ----------------------------------------------------------------
+	// Const
+	// ----------------------------------------------------------------
+
+	private void visitConstStmtDefinition(Stmt.Const stmt)
 	{
-		beginScope();
-		{
-			Resolve(stmt.Statements).IgnoreError();
-		}
-		endScope();
+		let @const = new ZenConst(stmt);
+		AddIdentifier(@const);
 	}
 
-	private void visitVarStmt(Stmt.Variable stmt)
+	// ----------------------------------------------------------------
+	// Struct
+	// ----------------------------------------------------------------
+
+	private void visitStructStmtDefinition(Stmt.Struct stmt)
+	{
+		let @struct = new ZenStruct(stmt);
+		AddIdentifier(@struct);
+
+		/*
+		let tempList = scope NamespaceList();
+		tempList.AddRange(m_currentNamespace.List);
+		tempList.Add(@struct.Name);
+
+		let ns = new ZenNamespace(tempList);
+		m_environment.Define(tempList.NamespaceListToString(.. scope .()), Variant.Create(ns));
+
+		m_currentNamespace.List.Add(@struct.Name);
+		defer m_currentNamespace.List.PopBack();
+		*/
+
+		m_currentStruct = @struct;
+		defer { m_currentStruct = null; }
+
+		// Add construtors to identifiers if any
+		for (let statement in ref stmt.Body.Statements)
+		{
+			if (let fun = statement as Stmt.Function)
+			{
+				if (fun.Kind == .Constructor)
+				{
+					delete fun.Type;
+					fun.Type = new NonPrimitiveDataType(stmt.Name)..SetNamespace(stmt.Namespace.List);
+
+					let zenFunc = visitFunctionStmtDefinition(fun);
+					@struct.Constructor = zenFunc;
+				}
+			}
+		}
+	}
+
+	// ----------------------------------------------------------------
+	// Variables
+	// ----------------------------------------------------------------
+
+	private void visitVariableStmtDefinition(Stmt.Variable stmt)
+	{
+		if (let nonPrim = stmt.Type as NonPrimitiveDataType)
+		{
+			if (nonPrim.Namespace == null)
+				nonPrim.Namespace = new .();
+
+			let nn = scope NamespaceList();
+			if (ZenIdentifierExistCheck<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, nn, true) case .Ok(let zenConst))
+			{
+				nonPrim.Namespace.Clear();
+				nonPrim.Namespace.AddRange(nn);
+			}
+		}
+	}
+
+	private void visitVariableStmt(Stmt.Variable stmt)
 	{
 		if (m_scopes.Count == 0) return;
 
@@ -360,28 +491,9 @@ public class Resolver
 			resolveExpr(stmt.Initializer);
 	}
 
-	private Result<ASTType> GetTypeFromExpr(Expr expr)
-	{
-		if (let literal = expr as Expr.Literal)
-		{
-			return .Ok(literal.Type);
-		}
-		if (let variable = expr as Expr.Variable)
-		{
-			if (findIdentifierStmt<Stmt.Variable>(variable.Name) case .Ok(let ret))
-			{
-				return .Ok(ret.Type);
-			}
-		}
-		if (let call = expr as Expr.Call)
-		{
-			if (findIdentifierStmt<Stmt.Function>(call.Callee.Name) case .Ok(let ret))
-			{
-				return .Ok(ret.Type);
-			}
-		}
-		return .Err;
-	}
+	// ----------------------------------------------------------------
+	// Return
+	// ----------------------------------------------------------------
 
 	private void visitReturnStmt(Stmt.Return stmt)
 	{
@@ -400,11 +512,38 @@ public class Resolver
 		}
 	}
 
+	// ----------------------------------------------------------------
+	// If
+	// ----------------------------------------------------------------
+
 	private void visitIfStatement(Stmt.If stmt)
 	{
 		resolveExpr(stmt.Condition);
 		resolveStmtBody(stmt.ThenBranch);
 		if (stmt.ElseBranch != null) resolveStmtBody(stmt.ElseBranch);
+	}
+
+	// ----------------------------------------------------------------
+	// While
+	// ----------------------------------------------------------------
+
+	private void visitWhileStatement(Stmt.While stmt)
+	{
+		resolveExpr(stmt.Condition);
+		resolveStmtBody(stmt.Body);
+	}
+
+	// ----------------------------------------------------------------
+	// Misc.
+	// ----------------------------------------------------------------
+
+	private void visitBlockStmt(Stmt.Block stmt)
+	{
+		beginScope();
+		{
+			Resolve(stmt.Statements).IgnoreError();
+		}
+		endScope();
 	}
 
 	private void visitExpressionStmt(Stmt.Expression stmt)
@@ -422,61 +561,59 @@ public class Resolver
 	// Expressions
 	// ----------------------------------------------------------------
 
-	private Result<TIdentifier> zenIdentifierExistCheck<TIdentifier, TExpr>(TExpr expr, Token name) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
+	/// Checks if an identifier exists, taking into consideration the usings in the current file, the current namespace, and the token supplied.
+	/// Ref `namespaces` is used to add onto any namespaces so it can be safely sent to the transpiler.
+	private Result<TIdentifier> ZenIdentifierExistCheck<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, bool reportErrors) where TIdentifier : Identifier
 	{
-		if (expr.Namespaces == null)
-			expr.Namespaces = new .();
+		newNamespaces.AddRange(namespaces);
 
 		void addNamespaceToExpr(Token namespaceToken)
 		{
-			expr.Namespaces.AddFront(namespaceToken);
+			newNamespaces.AddFront(namespaceToken);
 		}
 
 		mixin notAvailableError()
 		{
-			ThrowError(.IDENTIFIER_NOT_FOUND, name);
-			// reportError(expr.Callee.Name, scope $"Function '{expr.Callee.Name.Lexeme}' does not exist. ({expr.Namespaces.NamespaceListToString(.. scope .())})");
+			if (reportErrors)
+			{
+				ThrowError(.IDENTIFIER_NOT_FOUND, name);
+			}
 			return .Err;
 		}
 
 		mixin ambigRefError(Token one, Token two)
 		{
-			let childNString = scope String();
-			for (let child in expr.Namespaces)
+			if (reportErrors)
 			{
+				let childNString = scope String();
+				for (let child in namespaces)
+				{
+					childNString.Append("::");
+					childNString.Append(child.Lexeme);
+				}
 				childNString.Append("::");
-				childNString.Append(child.Lexeme);
-			}
-			childNString.Append("::");
-			childNString.Append(name.Lexeme);
+				childNString.Append(name.Lexeme);
 
-			ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
-			// reportError(expr.Callee.Name, scope $"'{expr.Callee.Name.Lexeme}' is an ambiguous reference between '{one.Lexeme}{childNString}' and '{two.Lexeme}{childNString}'.");
+				ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
+			}
 			return .Err;
 		}
 
-		// Check if the function we're calling is global.
-		if (expr.Namespaces.Count > 0)
+		// Check if the identifier we're looking for is global.
+		if (newNamespaces.Count > 0)
 		{
-			let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
+			let namespaceKey = newNamespaces.NamespaceListToString(.. scope .());
 
+			/*
 			if (m_environment.Get(namespaceKey) case .Ok)
 			{
 				return .Err;
 			}
+			*/
 
 			var foundUsing = false;
 			var foundUsings = scope NamespaceList();
 			var foundUsingName = default(Token);
-
-			/*
-			let usings = scope List<Stmt.Using>();
-			/*for (let ns in m_currentNamespace.List)
-			{
-				usings.Add(scope:: .(ns));
-			}*/
-			usings.AddRange(m_currentUsings);
-			*/
 
 			for (let @using in m_currentUsings)
 			{
@@ -504,23 +641,6 @@ public class Resolver
 			}
 			else
 			{
-				// Test if the same type exists in the current namespace.
-
-				let temp = scope NamespaceList();
-				temp.AddFront(m_currentNamespace.Front);
-				temp.AddRange(expr.Namespaces);
-
-				/*
-				let tempStr = temp.NamespaceListToString(.. scope .());
-				if (m_environment.Get(tempStr) case .Ok)
-				{
-					// ambigRefError!(foundUsings[0], m_currentNamespace.Front);
-				}
-				else
-				{
-				}
-				*/
-
 				addNamespaceToExpr(foundUsingName);
 			}
 		}
@@ -532,7 +652,7 @@ public class Resolver
 			addNamespaceToExpr(m_currentNamespace.Front);
 		}
 
-		let namespaceKey = expr.Namespaces.NamespaceListToString(.. scope .());
+		let namespaceKey = newNamespaces.NamespaceListToString(.. scope .());
 		if (m_environment.Get(namespaceKey) case .Ok(let val))
 		{
 			let zenNamespace = val.Get<ZenNamespace>();
@@ -553,9 +673,22 @@ public class Resolver
 		}
 	}
 
+	private Result<TIdentifier> ZenIdentifierExistCheckExpr<TIdentifier, TExpr>(TExpr expr, Token name, bool reportErrors) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
+	{
+		let newNamespaces = scope NamespaceList();
+		if (expr.Namespaces == null)
+			expr.Namespaces = new .();
+		let result = ZenIdentifierExistCheck<TIdentifier>(name, expr.Namespaces, newNamespaces, reportErrors);
+
+		expr.Namespaces.Clear();
+		expr.Namespaces.AddRange(newNamespaces);
+
+		return result;
+	}
+
 	private void visitCallExpr(Expr.Call expr)
 	{
-		if (zenIdentifierExistCheck<ZenFunction, Expr.Call>(expr, expr.Callee.Name) case .Ok(let zenFunc))
+		void actuallyCheckFunction(ZenFunction zenFunc)
 		{
 			// Throws an error if we have too many parameters.
 			if (zenFunc.Declaration.Parameters.Count < expr.Arguments.Count)
@@ -599,6 +732,10 @@ public class Resolver
 							ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
 						}
 					}
+					else if (let call = argument as Expr.Call)
+					{
+						resolveExpr(call);
+					}
 					else
 					{
 						// There needs to be an error here.
@@ -608,6 +745,20 @@ public class Resolver
 				}
 			}
 		}
+
+		if (ZenIdentifierExistCheckExpr<ZenStruct, Expr.Call>(expr, expr.Callee.Name, false) case .Ok(let zenStruct))
+		{
+			expr.Callee.Namespaces = new .();
+			expr.Callee.Namespaces.Add(zenStruct.Name);
+			expr.Callee.Name = Token(expr.Callee.Name.Type, expr.Callee.Name.Literal, "self", expr.Callee.Name.File, expr.Callee.Name.Line, expr.Callee.Name.Col, expr.Callee.Name.ColReal);
+			actuallyCheckFunction(zenStruct.Constructor);
+
+			return;
+		}
+		if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(expr, expr.Callee.Name, true) case .Ok(let zenFunc))
+		{
+			actuallyCheckFunction(zenFunc);
+		}
 	}
 
 	private void visitVariableExpr(Expr.Variable expr)
@@ -616,7 +767,7 @@ public class Resolver
 		{
 			return;
 		}
-		if (zenIdentifierExistCheck<ZenConst, Expr.Variable>(expr, expr.Name) case .Ok(let zenConst))
+		if (ZenIdentifierExistCheckExpr<ZenConst, Expr.Variable>(expr, expr.Name, true) case .Ok(let zenConst))
 		{
 			return;
 		}
@@ -645,16 +796,5 @@ public class Resolver
 		}
 
 		resolveExpr(expr.Value);
-	}
-
-	private void beginScope()
-	{
-		m_scopes.Add(new .());
-	}
-
-	private void endScope()
-	{
-		let @scope = m_scopes.PopBack();
-		delete @scope;
 	}
 }

@@ -9,7 +9,7 @@ public abstract class Expr
 {
 	public interface IHaveType
 	{
-		public abstract ASTType GetType();
+		public abstract DataType GetType();
 	}
 
 	public interface IHaveNamespaces
@@ -33,7 +33,7 @@ public abstract class Expr
 
 	public class Variable : Expr, IHaveNamespaces
 	{
-		public Token Name { get; }
+		public Token Name { get; set; }
 		public NamespaceList Namespaces { get; set; } ~ delete _;
 
 		public this(Token name, NamespaceList namespaces)
@@ -75,11 +75,11 @@ public abstract class Expr
 
 	public class Literal : Expr
 	{
-		public ASTType Type { get; }
+		public DataType Type { get; } ~ delete _;
 		public Token Token { get; }
 		public Variant Value { get; }
 
-		public this(ASTType type, Token token, Variant value)
+		public this(DataType type, Token token, Variant value)
 		{
 			this.Type = type;
 			this.Token = token;

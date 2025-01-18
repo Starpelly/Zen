@@ -49,6 +49,11 @@ public abstract class Stmt
 		{
 			this.List = list;
 		}
+
+		public this()
+		{
+			List = new .();
+		}
 	}
 
 	public class Block : Stmt
@@ -89,33 +94,34 @@ public abstract class Stmt
 			Main,
 			Function,
 			LocalFunction,
+			Constructor,
 			Event
 		}
 
 		public FunctionKind Kind { get; }
-		public Token Name { get; }
-		public ASTType Type { get; }
+		public Token Name { get; set; }
+		public DataType Type { get; set; } ~ delete _;
 		public List<Variable> Parameters { get; } ~ DeleteContainerAndItems!(_);
 		public Block Body { get; private set; } ~ delete _;
-		public Namespace Namespace { get; }
+		public Namespace Namespace { get; } = new .() ~ delete _;
 
-		public this(FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Block body, Namespace @namespace)
+		public this(FunctionKind kind, Token name, DataType type, List<Variable> parameters, Block body, Namespace @namespace)
 		{
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
 			this.Parameters = parameters;
 			this.Body = body;
-			this.Namespace = @namespace;
+			this.Namespace.List.AddRange(@namespace.List);
 		}
 
-		public this(FunctionKind kind, Token name, ASTType type, List<Variable> parameters, Namespace @namespace)
+		public this(FunctionKind kind, Token name, DataType type, List<Variable> parameters, Namespace @namespace)
 		{
 			this.Kind = kind;
 			this.Name = name;
 			this.Type = type;
 			this.Parameters = parameters;
-			this.Namespace = @namespace;
+			this.Namespace.List.AddRange(@namespace.List);
 		}
 
 		public void SetBody(Block body)
@@ -127,26 +133,30 @@ public abstract class Stmt
 	public class Const : Stmt, IIdentifier
 	{
 		public Token Name { get; }
-		public ASTType Type { get; }
+		public DataType Type { get; } ~ delete _;
 		public Expr Initializer { get; } ~ delete _;
-		public Namespace Namespace { get; }
+		public Namespace Namespace { get; } = new .() ~ delete _;
 
-		public this(Token name, ASTType type, Expr initializer, Namespace @namespace)
+		public this(Token name, DataType type, Expr initializer, Namespace @namespace)
 		{
 			this.Name = name;
 			this.Type = type;
 			this.Initializer = initializer;
-			this.Namespace = @namespace;
+			this.Namespace.List.AddRange(@namespace.List);
 		}
 	}
 
-	public class Struct : Stmt
+	public class Struct : Stmt, IIdentifier
 	{
 		public Token Name { get; }
+		public Block Body { get; private set; } ~ delete _;
+		public Namespace Namespace { get; } = new .() ~ delete _;
 
-		public this(Token name)
+		public this(Token name, Block body, Namespace @namespace)
 		{
 			this.Name = name;
+			this.Body = body;
+			this.Namespace.List.AddRange(@namespace.List);
 		}
 	}
 
@@ -201,13 +211,13 @@ public abstract class Stmt
 	public class Variable : Stmt
 	{
 		public Token Name { get; }
-		public ASTType Type { get; }
+		public DataType Type { get; } ~ delete _;
 		public Expr Initializer { get; } ~ delete _;
 		public bool Mutable { get; }
 
 		public bool HasInitializer => Initializer != null;
 
-		public this(Token name, ASTType type, Expr initializer, bool mutable)
+		public this(Token name, DataType type, Expr initializer, bool mutable)
 		{
 			this.Name = name;
 			this.Type = type;

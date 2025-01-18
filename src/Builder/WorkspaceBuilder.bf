@@ -282,7 +282,7 @@ public class WorkspaceBuilder
 		let std = scope StandardLib();
 		let zenHeader = std.WriteZenHeader(.. scope .());
 		let programFile = std.WriteProgramFile(.. scope .());
-		let allFile = std.WriteAllFile(.. scope .(), m_parsedFiles);
+		let allFile = std.WriteAllFile(.. scope .(), m_statements, m_parsedFiles);
 
 		// This is quite expensive(?)
 		// There should be a smarter way of generating files.

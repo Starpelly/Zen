@@ -1,5 +1,6 @@
 namespace Sandbox::Player;
 
+/*
 public struct Player
 {
     public fun void Update()
@@ -22,3 +23,4 @@ public fun void Draw()
 {
 
 }
+*/

@@ -7,7 +7,7 @@ namespace Zen.Parser;
 
 typealias NamespaceList = List<Token>;
 
-public struct ASTType
+public abstract class DataType
 {
 	public StringView Name { get; }
 	public Token Token { get; }
@@ -32,6 +32,35 @@ public struct ASTType
 	public static bool operator !=(Self a, Self b)
 	{
 		return !(a == b);
+	}
+}
+
+public class PrimitiveDataType : DataType
+{
+	public this(StringView name, Token token) : base(name, token)
+	{
+	}
+
+	public this(Token token) : base(token)
+	{
+	}
+}
+
+public class NonPrimitiveDataType : DataType
+{
+	public NamespaceList Namespace { get; set; } ~ delete _;
+
+	public void SetNamespace(NamespaceList @namespace)
+	{
+		this.Namespace = new .(@namespace);
+	}
+
+	public this(StringView name, Token token) : base(name, token)
+	{
+	}
+
+	public this(Token token) : base(token)
+	{
 	}
 }
 
@@ -67,6 +96,31 @@ public class ParseError : Zen.Builder.ICompilerError
 
 public class Parser
 {
+	private static List<StringView> PrimitiveDataTypes = new .()
+	{
+		"void",
+
+		"int",
+		"int8",
+		"int16",
+		"int32",
+		"int64",
+
+		"uint",
+		"uint8",
+		"uint16",
+		"uint32",
+		"uint64",
+
+		"float",
+		"double",
+
+		"bool",
+
+		"string_view",
+
+	} ~ delete _;
+
 	private List<Stmt> m_statements;
 	private int m_current = 0;
 
@@ -151,6 +205,22 @@ public class Parser
 		return new Stmt.Expression(expr);
 	}
 
+	private DataType GetDataTypeFromToken(Token typeToken)
+	{
+		DataType paramType;
+
+		if (PrimitiveDataTypes.Contains(typeToken.Lexeme))
+		{
+			paramType = new PrimitiveDataType(typeToken);
+		}
+		else
+		{
+			paramType = new NonPrimitiveDataType(typeToken);
+		}
+
+		return paramType;
+	}
+
 	// ----------------------------------------------------------------
 	// Non-expression statements
 	// ----------------------------------------------------------------
@@ -208,6 +278,8 @@ public class Parser
 	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
 	{
 		var kind;
+		Token type;
+		Token name;
 
 		if (m_currentFunction == null)
 		{
@@ -221,12 +293,21 @@ public class Parser
 			kind = .LocalFunction;
 		}
 
-		let type = consume(.Identifier, scope $"Expected {kind} type.");
-		let name = consume(.Identifier, scope $"Expected {kind} name.");
-
-		if (name.Lexeme == "Main" && kind != .LocalFunction)
+		if (check(.Self))
 		{
-			kind = .Main;
+			type = consume(.Self, scope $"Expected {kind} type.");
+			name = type;
+			kind = .Constructor;
+		}
+		else
+		{
+			type = consume(.Identifier, scope $"Expected {kind} type.");
+			name = consume(.Identifier, scope $"Expected {kind} name.");
+			
+			if (name.Lexeme == "Main" && kind != .LocalFunction)
+			{
+				kind = .Main;
+			}
 		}
 
 		consume(.LeftParentheses, scope $"Expected '(' after {kind} name.");
@@ -250,14 +331,17 @@ public class Parser
 				let pType = consume(.Identifier, "Expected parameter type.");
 				let pName = consume(.Identifier, "Expected parameter name.");
 
-				parameters.Add(new .(pName, .(pType), null, (accessor.Type == .Var)));
+				let paramType = GetDataTypeFromToken(pType);
+
+				parameters.Add(new .(pName, paramType, null, (accessor.Type == .Var)));
 			} while(match(.Comma));
 		}
 
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		var retFunc = new Stmt.Function(kind, name, .(type), parameters, m_currentNamespace);
+		let funcType = GetDataTypeFromToken(type);
+		var retFunc = new Stmt.Function(kind, name, funcType, parameters, m_currentNamespace);
 
 		let lastFunc = m_currentFunction;
 		m_currentFunction = retFunc;
@@ -281,6 +365,9 @@ public class Parser
 
 		consume(.LeftBrace, "Expected '{' before struct body.");
 		var scopeDepth = 0;
+		let statements = new List<Stmt>();
+
+		m_currentNamespace.List.Add(name);
 
 		while (true && !isAtEnd())
 		{
@@ -298,13 +385,16 @@ public class Parser
 				scopeDepth--;
 			}
 
-			// statements.Add(declaration());
-			advance();
+			statements.Add(declaration());
+			// advance();
 		}
+
+		m_currentNamespace.List.PopBack();
 
 		consume(.RightBrace, "Expected '}' after struct body.");
 
-		return new .(name);
+		let body = new Stmt.Block(statements);
+		return new .(name, body, m_currentNamespace);
 	}
 
 	private Stmt.Print PrintStatement()
@@ -385,8 +475,9 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after variable declaration.");
 
+		let varType = GetDataTypeFromToken(type);
 		// let inferredType = Token(.Integer, )
-		return new Stmt.Variable(name, .(type), initializer, mutable);
+		return new Stmt.Variable(name, varType, initializer, mutable);
 	}
 
 	private Stmt.Const ConstDeclaration()
@@ -406,7 +497,8 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after const declaration.");
 
-		return new Stmt.Const(name, .(type), initializer, m_currentNamespace);
+		let constType = GetDataTypeFromToken(type);
+		return new Stmt.Const(name, constType, initializer, m_currentNamespace);
 	}
 
 	// ----------------------------------------------------------------
@@ -595,7 +687,7 @@ public class Parser
 				break;
 			default:
 			}
-			return new Expr.Literal(.(typeName, prevToken), prevToken, prevToken.Literal);
+			return new Expr.Literal(new PrimitiveDataType(typeName, prevToken), prevToken, prevToken.Literal);
 		}
 
 		if (match(.False)) returnLiteral!(previous(), Variant.Create<bool>(false));

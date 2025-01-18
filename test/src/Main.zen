@@ -6,21 +6,28 @@ public const double PI = 3.14159265358979323846;
 
 public fun void Main()
 {
-	/*
-	let string_view constant = "Hello from Zen!!!";
-	var int mutable = 0;
-	let bool boolean = false;
-	*/
-
-	let double pi = Math::PI;
-	let double pi2 = PI;
-
-	Player::Update();
-	Player::Draw();
-
-	Console::WriteLine("Hello, Sailor!");
+	// Console::WriteLine("Hello, Sailor!");
 	// Console::TestMessageBox("Hello, World!", "Title");
-	// MiniaudioTest("C:/Users/Braedon/Music/JuniTrance.wav");
 
-	Raylib::PlayRaylib();
+	RunGame();
+}
+
+public fun void RunGame()
+{
+    let int screenWidth = 800;
+    let int screenHeight = 450;
+
+    Raylib::InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    
+    while (!Raylib::WindowShouldClose())
+	{
+		Raylib::BeginDrawing();
+        {
+            Raylib::ClearBackground(Raylib::Color(245, 245, 245, 255));
+            Raylib::DrawText("Hello from Zen!", 190, 200, 20, Raylib::Color(140, 140, 140, 255));
+        }
+        Raylib::EndDrawing();
+	}
+
+    Raylib::CloseWindow();
 }

@@ -1,8 +1,22 @@
 # Zen
-![githubbanner](.github/banner.png)
-Zen is an imperative scripting language that compiles to human-readable [C99](https://en.wikipedia.org/wiki/C99).
+Zen is a performance-oriented imperative scripting language that compiles to human-readable [C99](https://en.wikipedia.org/wiki/C99).
+Unlike most new languages, Zen is focused on providing an easy front-end scripting language for game engines.
 
-### Hello World
+## Design Goals
+* Compiled
+* Minimal runtime (in C)
+* No GC or reference counting overhead
+* Incremental compilation
+* Prefer verbosity over conciseness when it aides clarity or readability
+* Created to play nice with IDE-based workflows
+    * Compiler as a service
+    * Fast autocomplete results
+    * Fast and trustworthy refactorability
+* Good debuggability
+    * A VM that provides runtime hot-reloading including data layout changes
+    * Integrates nicely with VSCode
+
+## Hello World
 ```
 using System;
 
@@ -17,13 +31,9 @@ public fun void Main()
 ## Motivation
 Zen attempts to be "nice to look at" by my subjective standards. I take aesthetics pretty seriously, and when I can feel "zen" looking at my code, it makes me happy and thus, more productive.
 
-Zen is mostly a "toy language". As in, it shouldn't be used outside simple game scripting for simple video games.
+Zen is **NOT** a systems language. As in, it shouldn't be used outside game scripting for simple video games.
 
 ## Features/Design Decisions
-As Zen was designed for scripting video game logic, it functions very differently from traditional "systems languages".
-
-Zen is statically and strongly typed.
-
 #### Everything Is Explicitly Defined
 
 Unlike most other C-like languages, in Zen, every variable must have either a `var` or `let` keyword in front of it to signify if the value will change or not.
@@ -45,7 +55,7 @@ public struct Vector2
     public var float x;
     public var float y;
 
-    public this(let float x, let float y)
+    public self(let float x, let float y)
     {
         self.x = x;
         self.y = y;

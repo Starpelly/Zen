@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Threading;
 
-
 namespace ZenLsp.Connections;
 
 public class StdioConnection : IConnection

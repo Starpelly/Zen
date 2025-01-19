@@ -3,6 +3,7 @@
   "displayName": "Zen Language",
   "description": "The Zen scripting language",
   "version": "0.0.1",
+  "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -15,7 +16,11 @@
       "id": "zen",
       "aliases": ["Zen", "zen"],
       "extensions": [".zen"],
-      "configuration": "./language-configuration.json"
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "dark": "images/icon.png",
+        "light": "images/icon.png"
+      }
     }],
     "grammars": [{
       "language": "zen",

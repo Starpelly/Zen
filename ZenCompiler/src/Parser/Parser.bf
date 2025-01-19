@@ -134,6 +134,8 @@ public class Parser
 	private List<Stmt> m_statements;
 	private int m_current = 0;
 
+	public List<Stmt> Statements => m_statements;
+
 	private readonly List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
 

@@ -4,8 +4,7 @@ import fs from "fs";
 /**
  * @param {esbuild.BuildOptions} options 
  */
-function build(options)
-{
+function build(options) {
     let start = new Date();
 
     esbuild.build(options).then(() => {
@@ -14,8 +13,7 @@ function build(options)
     });
 }
 
-function watch(path, callback)
-{
+function watch(path, callback) {
     chokidar.watch(path).on("change", callback);
 }
 

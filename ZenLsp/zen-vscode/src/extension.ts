@@ -52,7 +52,7 @@ export class Extension {
             }
         
             let clientOptions: LanguageClientOptions = {
-                documentSelector: [{ scheme: "file", language: "bf" }]
+                documentSelector: [{ scheme: "file", language: "zen" }]
             };
         
             this.client = new LanguageClient(
@@ -74,10 +74,10 @@ export class Extension {
             vscode.commands.executeCommand("setContext", "zen.isActive", true);
 
             this.initialized = true;
-
-            console.log("Language client is ready.");
-            this.setBarItem("Running", false);
         });
+
+        this.client.onNotification("zen/classifyBegin", () => this.setBarItem("Classifying", true));
+        this.client.onNotification("zen/classifyEnd", () => this.setBarItem("Running", false));
     }
 
     setBarItem(status: string, spin: boolean) {
@@ -105,9 +105,15 @@ export class Extension {
         return Promise.reject("Zen LSP server is not running");
     }
 
+    registerCommand(command: string, callback: (ext: Extension) => void, onlyIfRunning = true) {
+        this.context.subscriptions.push(vscode.commands.registerCommand(command, () => {
+            if (onlyIfRunning) this.onlyIfRunning(() => callback(this));
+            else callback(this);
+        }, this));
+    }
+
     async stop() {
-        if (this.client && this.client.isRunning())
-        {
+        if (this.client && this.client.isRunning()) {
             await this.client.dispose();
         }
 

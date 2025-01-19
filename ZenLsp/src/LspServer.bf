@@ -74,7 +74,7 @@ public abstract class LspServer
 		Log.AddLogger(new LspLogger(this));
 
 		// Connect
-		Log.Info("Connecting to a client");
+		Log.Info("Waiting for a client to connect to...");
 
 		if (m_connection.Start() == .Err)
 		{

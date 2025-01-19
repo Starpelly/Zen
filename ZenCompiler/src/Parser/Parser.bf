@@ -131,16 +131,16 @@ public class Parser
 		("string_view", 	.StringView),
 	} ~ delete _;
 
-	private List<Stmt> m_statements;
+	private List<Node> m_nodes;
 	private int m_current = 0;
 
-	public List<Stmt> Statements => m_statements;
+	public List<Node> Nodes => m_nodes;
 
 	private readonly List<ParseError> m_errors = new .() ~ DeleteContainerAndItems!(_);
 	private bool m_hadErrors = false;
 
-	private Stmt.Namespace m_currentNamespace = null;
-	private Stmt.Function m_currentFunction = null;
+	private Node.Namespace m_currentNamespace = null;
+	private Node.Function m_currentFunction = null;
 
 	public readonly List<Token> Tokens { get; }
 	public readonly List<ParseError> Errors => m_errors;
@@ -150,43 +150,43 @@ public class Parser
 		this.Tokens = tokens;
 	}
 
-	public Result<List<Stmt>> Parse()
+	public Result<List<Node>> Parse()
 	{
-		m_statements = new .();
+		m_nodes = new .();
 
 		while (!isAtEnd() && !m_hadErrors)
 		{
-			m_statements.Add(declaration());
+			m_nodes.Add(declaration());
 		}
 
 		if (m_hadErrors)
 		{
-			DeleteContainerAndItems!(m_statements);
+			DeleteContainerAndItems!(m_nodes);
 			return .Err;
 		}
 
-		m_statements.Add(new Stmt.EOF());
-		return .Ok(m_statements);
+		m_nodes.Add(new Node.EOF());
+		return .Ok(m_nodes);
 	}
 
-	private Stmt declaration()
+	private Node declaration()
 	{
 		if (match(.Using))
-			return UsingStatement();
+			return UsingNode();
 		if (match(.Namespace))
-			return NamespaceStatement();
+			return NamespaceNode();
 		if (match(.Fun))
-			return FunctionStatement(.Function);
+			return FunctionNode(.Function);
 		if (match(.Struct))
-			return StructStatement();
+			return StructNode();
 		if (match(.Return))
-			return ReturnStatement();
+			return ReturnNode();
 		if (match(.If))
-			return IfStatement();
+			return IfNode();
 		if (match(.While))
-			return WhileStatement();
+			return WhileNode();
 		if (match(.CEmbed))
-			return CEmbedStatement();
+			return CEmbedNode();
 		if (match(.Public) || match(.Private))
 			return null;
 		if (match(.Var))
@@ -197,24 +197,24 @@ public class Parser
 			return ConstDeclaration();
 
 		// if (match(.Print))
-		// 	return PrintStatement();
+		// 	return PrintNode();
 
-		return statement();
+		return node();
 	}
 
-	private Stmt statement()
+	private Node node()
 	{
 		if (match(.LeftBrace))
-			return new Stmt.Block(Block());
+			return new Node.Block(Block());
 
-		return expressionStatement();
+		return expressionNode();
 	}
 
-	private Stmt expressionStatement()
+	private Node expressionNode()
 	{
 		let expr = Expression();
 		consume(.Semicolon, "Expected ';' after expression.");
-		return new Stmt.Expression(expr);
+		return new Node.Expression(expr);
 	}
 
 	public static DataType GetDataTypeFromTypeToken(Token typeToken)
@@ -250,33 +250,33 @@ public class Parser
 	}
 
 	// ----------------------------------------------------------------
-	// Non-expression statements
+	// Non-expression nodes
 	// ----------------------------------------------------------------
 
-	private List<Stmt> Block()
+	private List<Node> Block()
 	{
-		let statements = new List<Stmt>();
+		let nodes = new List<Node>();
 
 		while (!check(.RightBrace) && !isAtEnd())
 		{
-			statements.Add(declaration());
+			nodes.Add(declaration());
 		}
 
 		consume(.RightBrace, "Expected '}' after block.");
-		return statements;
+		return nodes;
 	}
 
-	private Stmt.Using UsingStatement()
+	private Node.Using UsingNode()
 	{
 		let identity = consume(.Identifier, "Expected identifier after 'using'.");
 
 		consume(.Semicolon, "Expected ';' after using identifier.");
 
-		let @using = new Stmt.Using(identity);
+		let @using = new Node.Using(identity);
 		return @using;
 	}
 
-	private Stmt.Namespace NamespaceStatement()
+	private Node.Namespace NamespaceNode()
 	{
 		let identity = consume(.Identifier, "Expected identifier after 'namespace'.");
 
@@ -299,11 +299,11 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after namespace identifier.");
 
-		m_currentNamespace = new Stmt.Namespace(new NamespaceList()..AddFront(identity)..AddRange(children));
+		m_currentNamespace = new Node.Namespace(new NamespaceList()..AddFront(identity)..AddRange(children));
 		return m_currentNamespace;
 	}
 
-	private Stmt.Function FunctionStatement(Stmt.Function.FunctionKind kind)
+	private Node.Function FunctionNode(Node.Function.FunctionKind kind)
 	{
 		var kind;
 		DataType type;
@@ -342,7 +342,7 @@ public class Parser
 
 		consume(.LeftParentheses, scope $"Expected '(' after {kind} name.");
 
-		let parameters = new List<Stmt.Variable>();
+		let parameters = new List<Node.Variable>();
 		if (!check(.RightParenthesis))
 		{
 			repeat
@@ -370,7 +370,7 @@ public class Parser
 		consume(.RightParenthesis, "Expected ')' after parameters.");
 		consume(.LeftBrace, scope $"Expected '\{\' before {kind} body.");
 
-		var retFunc = new Stmt.Function(kind, name, type, parameters, m_currentNamespace);
+		var retFunc = new Node.Function(kind, name, type, parameters, m_currentNamespace);
 
 		let lastFunc = m_currentFunction;
 		m_currentFunction = retFunc;
@@ -383,7 +383,7 @@ public class Parser
 		return retFunc;
 	}
 
-	private Stmt.Struct StructStatement()
+	private Node.Struct StructNode()
 	{
 		if (past(2).Type != .Public && past(2).Type != .Private)
 		{
@@ -394,7 +394,7 @@ public class Parser
 
 		consume(.LeftBrace, "Expected '{' before struct body.");
 		var scopeDepth = 0;
-		let statements = new List<Stmt>();
+		let nodes = new List<Node>();
 
 		m_currentNamespace.List.Add(name);
 
@@ -414,7 +414,7 @@ public class Parser
 				scopeDepth--;
 			}
 
-			statements.Add(declaration());
+			nodes.Add(declaration());
 			// advance();
 		}
 
@@ -422,18 +422,18 @@ public class Parser
 
 		consume(.RightBrace, "Expected '}' after struct body.");
 
-		let body = new Stmt.Block(statements);
+		let body = new Node.Block(nodes);
 		return new .(name, body, m_currentNamespace);
 	}
 
-	private Stmt.Print PrintStatement()
+	private Node.Print PrintNode()
 	{
 		let value = Expression();
 		consume(.Semicolon, "Expected ';' after value.");
 		return new .(value);
 	}
 
-	private Stmt.Return ReturnStatement()
+	private Node.Return ReturnNode()
 	{
 		let keyword = previous();
 		Expr value = null;
@@ -447,34 +447,34 @@ public class Parser
 		return new .(keyword, value);
 	}
 
-	private Stmt.If IfStatement()
+	private Node.If IfNode()
 	{
 		consume(.LeftParentheses, "Expected '(' after 'if'.");
 		let condition = Expression();
 		consume(.RightParenthesis, "Expected ')' after condition.");
 
-		let thenBranch = statement();
-		var elseBranch = default(Stmt);
+		let thenBranch = node();
+		var elseBranch = default(Node);
 
 		if (match(.Else))
 		{
-			elseBranch = statement();
+			elseBranch = node();
 		}
 
-		return new Stmt.If(condition, thenBranch, elseBranch);
+		return new Node.If(condition, thenBranch, elseBranch);
 	}
 
-	private Stmt.While WhileStatement()
+	private Node.While WhileNode()
 	{
 		consume(.LeftParentheses, "Expected '(' after 'while'.");
 		let condition = Expression();
 		consume(.RightParenthesis, "Expected ')' after condition.");
-		let body = statement();
+		let body = node();
 
-		return new Stmt.While(condition, body);
+		return new Node.While(condition, body);
 	}
 
-	private Stmt.CEmbed CEmbedStatement()
+	private Node.CEmbed CEmbedNode()
 	{
 		consume(.LeftParentheses, scope $"Expected '(' before 'cembed' body.");
 
@@ -484,10 +484,10 @@ public class Parser
 		consume(.RightParenthesis, "Expected ')' after 'cembed' body.");
 		consume(.Semicolon, "Expected ';' after cembed declaration.");
 
-		return new Stmt.CEmbed(code);
+		return new Node.CEmbed(code);
 	}
 
-	private Stmt.Variable VariableDeclaration(bool mutable)
+	private Node.Variable VariableDeclaration(bool mutable)
 	{
 		let type = consumeDataType();
 		let name = consume(.Identifier, "Expected variable name.");
@@ -506,10 +506,10 @@ public class Parser
 
 		// let varType = GetDataTypeFromTypeToken(type);
 		// let inferredType = Token(.Integer, )
-		return new Stmt.Variable(name, type, initializer, mutable);
+		return new Node.Variable(name, type, initializer, mutable);
 	}
 
-	private Stmt.Const ConstDeclaration()
+	private Node.Const ConstDeclaration()
 	{
 		let type = consumeDataType();
 		let name = consume(.Identifier, "Expected const name.");
@@ -526,7 +526,7 @@ public class Parser
 
 		consume(.Semicolon, "Expected ';' after const declaration.");
 
-		return new Stmt.Const(name, type, initializer, m_currentNamespace);
+		return new Node.Const(name, type, initializer, m_currentNamespace);
 	}
 
 	// ----------------------------------------------------------------

@@ -1,5 +1,6 @@
 using System;
 
+using Zen.IDEHelper;
 using ZenLsp.Logging;
 
 namespace ZenLsp;
@@ -9,6 +10,8 @@ public class ZenLspServer : LspServer
 	public const String VERSION = "0.1.0";
 
 	private DocumentManager m_documents = new .() ~ delete _;
+
+	public static Workspace GlobalWorkspace = new .() ~ delete _;
 
 	private bool m_markdown = false;
 	private bool m_documentChanges = false;
@@ -247,13 +250,15 @@ public class ZenLspServer : LspServer
 		StringView hover = Utils.Lines(hoverData).GetNext().Value;
 		if (!hover.StartsWith(':')) return Json.Null();
 
+		hover.Adjust(1);
+
 		// Create json
 		let json = Json.Object();
 
 		let contents = Json.Object();
 		json["contents"] = contents;
 		contents["kind"] = .String("markdown");
-		contents["value"] = .String("Testttt");
+		contents["value"] = .String(hover);
 
 		return json;
 	}

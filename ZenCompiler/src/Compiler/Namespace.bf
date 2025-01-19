@@ -12,7 +12,7 @@ public class ZenNamespace
 
 	public String Name { get; } ~ delete _;
 
-	public this(Stmt.Namespace @namespace)
+	public this(Node.Namespace @namespace)
 	{
 		this.Name = @namespace.List.NamespaceListToString(.. new .());
 	}

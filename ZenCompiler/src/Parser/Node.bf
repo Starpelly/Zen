@@ -5,14 +5,14 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
-public abstract class Stmt
+public abstract class Node
 {
 	public interface IIdentifier
 	{
 		public Namespace Namespace { get; }
 	}
 
-	public class Parameter : Stmt
+	public class Parameter : Node
 	{
 		public Token Type { get; }
 		public Token Name { get; }
@@ -26,11 +26,11 @@ public abstract class Stmt
 		}
 	}
 
-	public class EOF : Stmt
+	public class EOF : Node
 	{
 	}
 
-	public class Using : Stmt
+	public class Using : Node
 	{
 		public Token Name { get; }
 
@@ -40,7 +40,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Namespace : Stmt
+	public class Namespace : Node
 	{
 		public NamespaceList List { get; } ~ delete _;
 		public Token Front => List.Front;
@@ -56,17 +56,17 @@ public abstract class Stmt
 		}
 	}
 
-	public class Block : Stmt
+	public class Block : Node
 	{
-		public List<Stmt> Statements { get; } ~ DeleteContainerAndItems!(_);
+		public List<Node> Nodes { get; } ~ DeleteContainerAndItems!(_);
 
-		public this(List<Stmt> statements)
+		public this(List<Node> nodes)
 		{
-			this.Statements = statements;
+			this.Nodes = nodes;
 		}
 	}
 
-	public class Expression : Stmt
+	public class Expression : Node
 	{
 		public Expr InnerExpression { get; } ~ delete _;
 
@@ -76,7 +76,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class CEmbed : Stmt
+	public class CEmbed : Node
 	{
 		public String Code { get; } ~ delete _;
 
@@ -86,7 +86,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Function : Stmt, IIdentifier
+	public class Function : Node, IIdentifier
 	{
 		public enum FunctionKind
 		{
@@ -130,7 +130,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Const : Stmt, IIdentifier
+	public class Const : Node, IIdentifier
 	{
 		public Token Name { get; }
 		public DataType Type { get; } ~ delete _;
@@ -146,7 +146,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Struct : Stmt, IIdentifier
+	public class Struct : Node, IIdentifier
 	{
 		public Token Name { get; }
 		public Block Body { get; private set; } ~ delete _;
@@ -160,7 +160,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Print : Stmt
+	public class Print : Node
 	{
 		public Expr InnerExpression { get; } ~ delete _;
 
@@ -170,7 +170,7 @@ public abstract class Stmt
 		}
 	}
 
-	public class Return : Stmt
+	public class Return : Node
 	{
 		public Token Keyword { get; }
 		public Expr Value { get; } ~ delete _;
@@ -182,13 +182,13 @@ public abstract class Stmt
 		}
 	}
 
-	public class If : Stmt
+	public class If : Node
 	{
 		public Expr Condition { get; } ~ delete _;
-		public Stmt ThenBranch { get; } ~ delete _;
-		public Stmt ElseBranch { get; } ~ delete _;
+		public Node ThenBranch { get; } ~ delete _;
+		public Node ElseBranch { get; } ~ delete _;
 
-		public this(Expr condition, Stmt thenBranch, Stmt elseBranch)
+		public this(Expr condition, Node thenBranch, Node elseBranch)
 		{
 			this.Condition = condition;
 			this.ThenBranch = thenBranch;
@@ -196,19 +196,19 @@ public abstract class Stmt
 		}
 	}
 
-	public class While : Stmt
+	public class While : Node
 	{
 		public Expr Condition { get; } ~ delete _;
-		public Stmt Body { get; } ~ delete _;
+		public Node Body { get; } ~ delete _;
 
-		public this(Expr condition, Stmt body)
+		public this(Expr condition, Node body)
 		{
 			this.Condition = condition;
 			this.Body = body;
 		}
 	}
 
-	public class Variable : Stmt
+	public class Variable : Node
 	{
 		public Token Name { get; }
 		public DataType Type { get; } ~ delete _;

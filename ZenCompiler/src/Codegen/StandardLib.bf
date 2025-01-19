@@ -81,7 +81,7 @@ public class StandardLib
 		builder.AppendLine("#include \"All.h\"");
 	}
 
-	public void WriteAllFile(String outString, List<Stmt> statements, List<CompiledFile> files)
+	public void WriteAllFile(String outString, List<Node> nodes, List<CompiledFile> files)
 	{
 		let builder = scope CodeBuilder();
 		defer outString.Append(builder.Code);
@@ -92,11 +92,11 @@ public class StandardLib
 		builder.AppendEmptyLine();
 
 		builder.AppendBanner("Public types.");
-		for (let statement in statements)
+		for (let node in nodes)
 		{
-			if (let @struct = statement as Stmt.Struct)
+			if (let @struct = node as Node.Struct)
 			{
-				let ns = Transpiler.WriteNamespace(.. scope .(), @struct.Namespace);
+				let ns = Codegen.WriteNamespace(.. scope .(), @struct.Namespace);
 				builder.AppendLine(scope $"typedef struct {ns}{@struct.Name.Lexeme};");
 			}
 		}

@@ -33,11 +33,11 @@ public class LexedFile
 
 public class ParsedFile
 {
-	public List<Stmt> Statements { get; } ~ DeleteContainerAndItems!(_);
+	public List<Node> Nodes { get; } ~ DeleteContainerAndItems!(_);
 
-	public this(List<Stmt> statements)
+	public this(List<Node> nodes)
 	{
-		this.Statements = statements;
+		this.Nodes = nodes;
 	}
 }
 
@@ -76,7 +76,7 @@ public class WorkspaceBuilder
 	private String m_outBuildDir ~ delete _;
 
 	private List<CompiledFile> m_parsedFiles = new .() ~ DeleteContainerAndItems!(_);
-	private List<Stmt> m_statements = new .() ~ delete _;
+	private List<Node> m_nodes = new .() ~ delete _;
 
 	private List<String> m_writtenFiles = new .() ~ DeleteContainerAndItems!(_);
 	private int m_filesParsed = 0;
@@ -236,10 +236,10 @@ public class WorkspaceBuilder
 			StopwatchParser.Start();
 
 			let parser = scope Parser(tokens);
-			if (parser.Parse() case .Ok(let statements))
+			if (parser.Parse() case .Ok(let nodes))
 			{
-				m_statements.AddRange(statements);
-				newFile.SetParsed(new .(statements));
+				m_nodes.AddRange(nodes);
+				newFile.SetParsed(new .(nodes));
 			}
 			else
 			{
@@ -257,7 +257,7 @@ public class WorkspaceBuilder
 	{
 		StopwatchCompiler.Start();
 
-		if (resolver.Resolve(m_statements) case .Ok(let resolvedEnv))
+		if (resolver.Resolve(m_nodes) case .Ok(let resolvedEnv))
 		{
 			StopwatchCompiler.Stop();
 			return .Ok(resolvedEnv);
@@ -282,7 +282,7 @@ public class WorkspaceBuilder
 		let std = scope StandardLib();
 		let zenHeader = std.WriteZenHeader(.. scope .());
 		let programFile = std.WriteProgramFile(.. scope .());
-		let allFile = std.WriteAllFile(.. scope .(), m_statements, m_parsedFiles);
+		let allFile = std.WriteAllFile(.. scope .(), m_nodes, m_parsedFiles);
 
 		// This is quite expensive(?)
 		// There should be a smarter way of generating files.
@@ -324,7 +324,7 @@ public class WorkspaceBuilder
 		let outputFileH = Path.Combine(.. scope .(), outputCodeDir, scope $"{fullFileNameWOE}.h");
 		let outputFileC = Path.Combine(.. scope .(), outputCodeDir, scope $"{fullFileNameWOE}.c");
 
-		let compiler = scope Transpiler(file.Parsed.Statements, env);
+		let compiler = scope Codegen(file.Parsed.Nodes, env);
 		let output = compiler.Compile(fileNameWOE, fullFileNameWOE);
 
 		Directory.CreateDirectory(Path.GetDirectoryPath(outputFileC, .. scope .()));

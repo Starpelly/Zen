@@ -22,11 +22,11 @@ public class Resolver
 {
 	private ZenEnvironment m_environment = new .() ~ delete _;
 
-	private List<Stmt.Using> m_currentUsings = new .() ~ delete _;
-	private List<Dictionary<StringView, Stmt>> m_scopes = new .() ~ DeleteContainerAndItems!(_);
+	private List<Node.Using> m_currentUsings = new .() ~ delete _;
+	private List<Dictionary<StringView, Node>> m_scopes = new .() ~ DeleteContainerAndItems!(_);
 
-	private Stmt.Namespace m_currentNamespace = null;
-	private Stmt.Function m_currentFunction = null;
+	private Node.Namespace m_currentNamespace = null;
+	private Node.Function m_currentFunction = null;
 	private ZenStruct m_currentStruct = null;
 
 	private readonly List<ResolvingError> m_errors = new .() ~ DeleteContainerAndItems!(_);
@@ -82,15 +82,15 @@ public class Resolver
 		}
 	}
 
-	public Result<ZenEnvironment> Resolve(List<Stmt> statements)
+	public Result<ZenEnvironment> Resolve(List<Node> nodes)
 	{
 		// 1. Define types
-		resolveDefinitions(statements);
+		resolveDefinitions(nodes);
 
 		// 2. Type checking
-		for (let statement in statements)
+		for (let node in nodes)
 		{
-			resolveStmtBody(statement);
+			resolveStmtBody(node);
 		}
 
 		if (m_hadErrors)
@@ -98,79 +98,79 @@ public class Resolver
 		return .Ok(m_environment);
 	}
 
-	private void resolveDefinitions(List<Stmt> statements)
+	private void resolveDefinitions(List<Node> nodes)
 	{
-		for (let stmt in statements)
+		for (let stmt in nodes)
 		{
 			resolveStmtDefn(stmt);
 		}
 	}
 
-	private void resolveStmtDefn(Stmt stmt)
+	private void resolveStmtDefn(Node stmt)
 	{
-		if (let @namespace = stmt as Stmt.Namespace)
+		if (let @namespace = stmt as Node.Namespace)
 		{
 			visitNamespaceStmtDefinition(@namespace);
 		}
-		if (let fun = stmt as Stmt.Function)
+		if (let fun = stmt as Node.Function)
 		{
 			visitFunctionStmtDefinition(fun);
 		}
-		if (let @const = stmt as Stmt.Const)
+		if (let @const = stmt as Node.Const)
 		{
 			visitConstStmtDefinition(@const);
 		}
-		if (let @struct = stmt as Stmt.Struct)
+		if (let @struct = stmt as Node.Struct)
 		{
 			visitStructStmtDefinition(@struct);
 		}
-		if (let @var = stmt as Stmt.Variable)
+		if (let @var = stmt as Node.Variable)
 		{
 			visitVariableStmtDefinition(@var);
 		}
 	}
 
-	private void resolveStmtBody(Stmt stmt)
+	private void resolveStmtBody(Node stmt)
 	{
-		if (let @using = stmt as Stmt.Using)
+		if (let @using = stmt as Node.Using)
 		{
-			visitUsingStmtBody(@using);
+			visitUsingNodeBody(@using);
 		}
-		if (let @namespace = stmt as Stmt.Namespace)
+		if (let @namespace = stmt as Node.Namespace)
 		{
-			visitNamespaceStmtBody(@namespace);
+			visitNamespaceNodeBody(@namespace);
 		}
-		if (let fun = stmt as Stmt.Function)
+		if (let fun = stmt as Node.Function)
 		{
-			visitFunctionStmtBody(fun);
+			visitFunctionNodeBody(fun);
 		}
-		if (let block = stmt as Stmt.Block)
+		if (let block = stmt as Node.Block)
 		{
-			visitBlockStmt(block);
+			visitBlockNode(block);
 		}
-		if (let @var = stmt as Stmt.Variable)
+		if (let @var = stmt as Node.Variable)
 		{
-			visitVariableStmt(@var);
+			visitVariableNode(@var);
 		}
-		if (let ret = stmt as Stmt.Return)
+		if (let ret = stmt as Node.Return)
 		{
-			visitReturnStmt(ret);
+			visitReturnNode(ret);
 		}
-		if (let expr = stmt as Stmt.Expression)
+		if (let expr = stmt as Node.Expression)
 		{
-			visitExpressionStmt(expr);
+			visitExpressionNode(expr);
 		}
-		if (let @if = stmt as Stmt.If)
+		if (let @if = stmt as Node.If)
 		{
-			visitIfStatement(@if);
+			visitIfNode(@if);
 		}
-		if (let @while = stmt as Stmt.While)
+		if (let @while = stmt as Node.While)
 		{
-			visitWhileStatement(@while);
+			visitWhileNode(@while);
 		}
-		if (let eof = stmt as Stmt.EOF)
+		if (let eof = stmt as Node.EOF)
 		{
-			visitEOFStmt(eof);
+			visitEOFNode(eof);
 		}
 	}
 
@@ -207,7 +207,7 @@ public class Resolver
 		return false;
 	}
 
-	private Result<T> findIdentifierStmt<T>(Token token) where T : Stmt
+	private Result<T> findIdentifierStmt<T>(Token token) where T : Node
 	{
 		for (let i < m_scopes.Count)
 		{
@@ -222,7 +222,7 @@ public class Resolver
 		return .Err;
 	}
 
-	private void addIdentifierToBackScope(Token token, Stmt stmt)
+	private void addIdentifierToBackScope(Token token, Node stmt)
 	{
 		let @scope = m_scopes.Back;
 		if (@scope.ContainsKey(token.Lexeme))
@@ -262,14 +262,14 @@ public class Resolver
 		}
 		if (let variable = expr as Expr.Variable)
 		{
-			if (findIdentifierStmt<Stmt.Variable>(variable.Name) case .Ok(let ret))
+			if (findIdentifierStmt<Node.Variable>(variable.Name) case .Ok(let ret))
 			{
 				return .Ok(ret.Type);
 			}
 		}
 		if (let call = expr as Expr.Call)
 		{
-			if (findIdentifierStmt<Stmt.Function>(call.Callee.Name) case .Ok(let ret))
+			if (findIdentifierStmt<Node.Function>(call.Callee.Name) case .Ok(let ret))
 			{
 				return .Ok(ret.Type);
 			}
@@ -320,7 +320,7 @@ public class Resolver
 	// Using
 	// ----------------------------------------------------------------
 
-	private void visitUsingStmtBody(Stmt.Using stmt)
+	private void visitUsingNodeBody(Node.Using stmt)
 	{
 		m_currentUsings.Add(stmt);
 	}
@@ -329,7 +329,7 @@ public class Resolver
 	// Namespace
 	// ----------------------------------------------------------------
 
-	private void visitNamespaceStmtDefinition(Stmt.Namespace stmt)
+	private void visitNamespaceStmtDefinition(Node.Namespace stmt)
 	{
 		// let enclosingNamespace = m_currentNamespace;
 		m_currentNamespace = stmt;
@@ -354,7 +354,7 @@ public class Resolver
 		// m_currentNamespace = enclosingNamespace;
 	}
 
-	private void visitNamespaceStmtBody(Stmt.Namespace stmt)
+	private void visitNamespaceNodeBody(Node.Namespace stmt)
 	{
 		m_currentNamespace = stmt;
 	}
@@ -363,7 +363,7 @@ public class Resolver
 	// Functions
 	// ----------------------------------------------------------------
 
-	private ZenFunction visitFunctionStmtDefinition(Stmt.Function stmt)
+	private ZenFunction visitFunctionStmtDefinition(Node.Function stmt)
 	{
 		let fun = new ZenFunction(stmt);
 		if (m_currentStruct != null)
@@ -378,7 +378,7 @@ public class Resolver
 		return fun;
 	}
 
-	private void visitFunctionStmtBody(Stmt.Function stmt)
+	private void visitFunctionNodeBody(Node.Function stmt)
 	{
 		let enclosingFunction = m_currentFunction;
 		m_currentFunction = stmt;
@@ -407,7 +407,7 @@ public class Resolver
 	// Const
 	// ----------------------------------------------------------------
 
-	private void visitConstStmtDefinition(Stmt.Const stmt)
+	private void visitConstStmtDefinition(Node.Const stmt)
 	{
 		let @const = new ZenConst(stmt);
 		AddIdentifier(@const);
@@ -417,7 +417,7 @@ public class Resolver
 	// Struct
 	// ----------------------------------------------------------------
 
-	private void visitStructStmtDefinition(Stmt.Struct stmt)
+	private void visitStructStmtDefinition(Node.Struct stmt)
 	{
 		let @struct = new ZenStruct(stmt);
 		AddIdentifier(@struct);
@@ -438,9 +438,9 @@ public class Resolver
 		defer { m_currentStruct = null; }
 
 		// Add construtors to identifiers if any
-		for (let statement in ref stmt.Body.Statements)
+		for (let node in ref stmt.Body.Nodes)
 		{
-			if (let fun = statement as Stmt.Function)
+			if (let fun = node as Node.Function)
 			{
 				if (fun.Kind == .Constructor)
 				{
@@ -458,7 +458,7 @@ public class Resolver
 	// Variables
 	// ----------------------------------------------------------------
 
-	private void visitVariableStmtDefinition(Stmt.Variable stmt)
+	private void visitVariableStmtDefinition(Node.Variable stmt)
 	{
 		if (let nonPrim = stmt.Type as NonPrimitiveDataType)
 		{
@@ -474,7 +474,7 @@ public class Resolver
 		}
 	}
 
-	private void visitVariableStmt(Stmt.Variable stmt)
+	private void visitVariableNode(Node.Variable stmt)
 	{
 		if (m_scopes.Count == 0) return;
 
@@ -493,7 +493,7 @@ public class Resolver
 	// Return
 	// ----------------------------------------------------------------
 
-	private void visitReturnStmt(Stmt.Return stmt)
+	private void visitReturnNode(Node.Return stmt)
 	{
 		if (m_currentFunction == null)
 		{
@@ -514,7 +514,7 @@ public class Resolver
 	// If
 	// ----------------------------------------------------------------
 
-	private void visitIfStatement(Stmt.If stmt)
+	private void visitIfNode(Node.If stmt)
 	{
 		resolveExpr(stmt.Condition);
 		resolveStmtBody(stmt.ThenBranch);
@@ -525,7 +525,7 @@ public class Resolver
 	// While
 	// ----------------------------------------------------------------
 
-	private void visitWhileStatement(Stmt.While stmt)
+	private void visitWhileNode(Node.While stmt)
 	{
 		resolveExpr(stmt.Condition);
 		resolveStmtBody(stmt.Body);
@@ -535,21 +535,21 @@ public class Resolver
 	// Misc.
 	// ----------------------------------------------------------------
 
-	private void visitBlockStmt(Stmt.Block stmt)
+	private void visitBlockNode(Node.Block stmt)
 	{
 		beginScope();
 		{
-			Resolve(stmt.Statements).IgnoreError();
+			Resolve(stmt.Nodes).IgnoreError();
 		}
 		endScope();
 	}
 
-	private void visitExpressionStmt(Stmt.Expression stmt)
+	private void visitExpressionNode(Node.Expression stmt)
 	{
 		resolveExpr(stmt.InnerExpression);
 	}
 
-	private void visitEOFStmt(Stmt.EOF stmt)
+	private void visitEOFNode(Node.EOF stmt)
 	{
 		m_currentUsings.Clear();
 		m_currentNamespace = null;
@@ -709,7 +709,7 @@ public class Resolver
 
 					if (let @var = argument as Expr.Variable)
 					{
-						if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let argDef))
+						if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let argDef))
 						{
 							if (parameter.Type.Name != argDef.Type.Name)
 							{
@@ -798,7 +798,7 @@ public class Resolver
 	{
 		if (let @var = expr.Name as Expr.Variable)
 		{
-			if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let identifier))
+			if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let identifier))
 			{
 				if (!identifier.Mutable)
 				{
@@ -824,7 +824,7 @@ public class Resolver
 			// This is a lot of code, and it's making me uncomfortable...
 			if (let @var = get.Object as Expr.Variable)
 			{
-				if (findIdentifierStmt<Stmt.Variable>(@var.Name) case .Ok(let variable))
+				if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let variable))
 				{
 					if (!variable.Mutable)
 					{
@@ -838,9 +838,9 @@ public class Resolver
 						if (ZenIdentifierExistCheck<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenStruct))
 						{
 							// Structs should probably store these...
-							for (let statement in zenStruct.Declaration.Body.Statements)
+							for (let node in zenStruct.Declaration.Body.Nodes)
 							{
-								if (let structVar = statement as Stmt.Variable)
+								if (let structVar = node as Node.Variable)
 								{
 									let typeA = structVar.Type;
 									if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))

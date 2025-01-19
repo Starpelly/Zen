@@ -22,10 +22,10 @@ public abstract class Identifier
 
 public class ZenConst : Identifier
 {
-	private Stmt.Const m_declaration;
-	public Stmt.Const Declaration => m_declaration;
+	private Node.Const m_declaration;
+	public Node.Const Declaration => m_declaration;
 
-	public this(Stmt.Const declaration)
+	public this(Node.Const declaration)
 	{
 		this.m_declaration = declaration;
 	}
@@ -39,10 +39,10 @@ public class ZenConst : Identifier
 
 public class ZenFunction : Identifier
 {
-	private readonly Stmt.Function m_declaration;
-	public Stmt.Function Declaration => m_declaration;
+	private readonly Node.Function m_declaration;
+	public Node.Function Declaration => m_declaration;
 
-	public this(Stmt.Function declaration)
+	public this(Node.Function declaration)
 	{
 		this.m_declaration = declaration;
 	}
@@ -56,10 +56,10 @@ public class ZenFunction : Identifier
 
 public class ZenStruct : Identifier
 {
-	private readonly Stmt.Struct m_declaration;
-	public Stmt.Struct Declaration => m_declaration;
+	private readonly Node.Struct m_declaration;
+	public Node.Struct Declaration => m_declaration;
 
-	public this(Stmt.Struct declaration)
+	public this(Node.Struct declaration)
 	{
 		this.m_declaration = declaration;
 	}

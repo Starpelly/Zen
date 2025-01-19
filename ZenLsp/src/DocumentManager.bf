@@ -22,8 +22,8 @@ public class Document
 	public int version;
 	public String contents ~ delete _;
 
-	private Tokenizer m_lexer;
-	private Parser m_parser;
+	private Tokenizer m_lexer ~ delete _;
+	private Parser m_parser ~ delete _;
 
 	private bool charDataDirty;
 	private bool charDataParse;
@@ -60,9 +60,13 @@ public class Document
 		for (let i < m_parser.Tokens.Count)
 		{
 			let token = m_parser.Tokens[i];
-			let length = token.Lexeme.Length;
-			if (line == token.Line
-				&& (char >= token.Col && char <= token.Col + length))
+
+			let tokenLength = token.Lexeme.Length - 1;
+			let tokenLine = token.Line;
+			let tokenCol = token.Col;
+
+			if (line == tokenLine
+				&& (char >= tokenCol && char <= tokenCol + tokenLength))
 			{
 				retVal = i;
 				break;
@@ -83,8 +87,12 @@ public class Document
 			case .SymbolInfo:     name = "GetCompilerData - SymbolInfo";
 		}
 
+		if (character < 0) return;
+
 		buffer.Append(":");
-		buffer.Append("Hello!!!");
+
+		let token = m_parser.Tokens[character];
+		buffer.Append(ZenLspServer.GlobalWorkspace.GetHoverData(.. scope .(), token));
 	}
 
 	public void Parse()
@@ -94,6 +102,8 @@ public class Document
 
 		m_parser = new Parser(tokens);
 		m_parser.Parse().IgnoreError();
+
+		ZenLspServer.GlobalWorkspace.ReplaceAST(path, m_parser.Statements);
 	}
 }
 

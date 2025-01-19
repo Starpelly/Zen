@@ -7,17 +7,17 @@ using Zen.Parser;
 
 namespace Zen.Transpiler;
 
-public class Transpiler
+public class Codegen
 {
 	private CodeBuilder m_outputH = new .() ~ delete _;
 	private CodeBuilder m_outputC = new .() ~ delete _;
 
-	public readonly List<Stmt> Statements { get; }
+	public readonly List<Node> Nodes { get; }
 	public readonly ZenEnvironment Enviornment { get; }
 
-	public this(List<Stmt> statements, ZenEnvironment env)
+	public this(List<Node> nodes, ZenEnvironment env)
 	{
-		this.Statements = statements;
+		this.Nodes = nodes;
 		this.Enviornment = env;
 	}
 
@@ -40,11 +40,11 @@ public class Transpiler
 		m_outputH.AppendLine("#pragma once");
 		m_outputH.AppendEmptyLine();
 
-		for (let statement in Statements)
+		for (let node in Nodes)
 		{
-			if (statement != null)
+			if (node != null)
 			{
-				if (let @const = statement as Stmt.Const)
+				if (let @const = node as Node.Const)
 				{
 					let val = expressionToString(.. scope .(), @const.Initializer);
 					let name = scope String();
@@ -54,7 +54,7 @@ public class Transpiler
 					m_outputH.AppendLine(scope $"#define {name} {val}");
 				}
 
-				if (let @struct = statement as Stmt.Struct)
+				if (let @struct = node as Node.Struct)
 				{
 					let ns = WriteNamespace(.. scope .(), @struct.Namespace);
 
@@ -62,9 +62,9 @@ public class Transpiler
 					m_outputH.IncreaseTab();
 
 					// Structs in C can only have fields.
-					for (let statement in @struct.Body.Statements)
+					for (let node in @struct.Body.Nodes)
 					{
-						if (let variable = statement as Stmt.Variable)
+						if (let variable = node as Node.Variable)
 						{
 							stmtToString(ref m_outputH, variable);
 						}
@@ -75,21 +75,21 @@ public class Transpiler
 					m_outputH.Append(scope $" {ns}{@struct.Name.Lexeme};");
 
 					// Struct methods
-					for (let statement in @struct.Body.Statements)
+					for (let node in @struct.Body.Nodes)
 					{
-						if (let fun = statement as Stmt.Function)
+						if (let fun = node as Node.Function)
 						{
 							stmtToStringHeader(ref m_outputH, fun);
 						}
 					}
 
-					if (statement != Statements.Back) // @Speed - slow probably...
+					if (node != Nodes.Back) // @Speed - slow probably...
 						m_outputH.AppendEmptyLine();
 				}
 
-				if (statement.GetType() == typeof(Stmt.Function))
+				if (node.GetType() == typeof(Node.Function))
 				{
-					stmtToStringHeader(ref m_outputH, statement);
+					stmtToStringHeader(ref m_outputH, node);
 				}
 			}
 		}
@@ -101,18 +101,18 @@ public class Transpiler
 		// m_outputC.AppendLine(scope $"#include \"{fileName}.h\"");
 		// m_outputC.AppendEmptyLine();
 
-		for (let statement in Statements)
+		for (let node in Nodes)
 		{
-			if (statement != null)
+			if (node != null)
 			{
-				stmtToString(ref m_outputC, statement);
+				stmtToString(ref m_outputC, node);
 			}
 		}
 
 		return (m_outputH.Code, m_outputC.Code);
 	}
 
-	public static void WriteNamespace(String outStr, Stmt.Namespace ns)
+	public static void WriteNamespace(String outStr, Node.Namespace ns)
 	{
 		if (ns == null) return;
 
@@ -135,9 +135,9 @@ public class Transpiler
 		outStr.Append(type.Name);
 	}
 
-	private void stmtToStringHeader(ref CodeBuilder outLexeme, Stmt stmt)
+	private void stmtToStringHeader(ref CodeBuilder outLexeme, Node stmt)
 	{
-		if (let fun = stmt as Stmt.Function)
+		if (let fun = stmt as Node.Function)
 		{
 			let funcName = scope String();
 			if (fun.Kind == .Main)
@@ -174,21 +174,21 @@ public class Transpiler
 		}
 	}
 
-	private void stmtToString(ref CodeBuilder outLexeme, Stmt stmt)
+	private void stmtToString(ref CodeBuilder outLexeme, Node stmt)
 	{
 		// outLexeme.AppendTabs();
 
-		if (let @struct = stmt as Stmt.Struct)
+		if (let @struct = stmt as Node.Struct)
 		{
-			for (let statement in @struct.Body.Statements)
+			for (let node in @struct.Body.Nodes)
 			{
-				if (let fun = statement as Stmt.Function)
+				if (let fun = node as Node.Function)
 				{
 					stmtToString(ref outLexeme, fun);
 				}
 			}
 		}
-		if (let fun = stmt as Stmt.Function)
+		if (let fun = stmt as Node.Function)
 		{
 			let parameters = scope String();
 
@@ -213,10 +213,10 @@ public class Transpiler
 			funcName.Append(fun.Name.Lexeme);
 
 			// Shitty code to check for local functions because C doesn't support local functions...
-			var localVars = scope List<Stmt.Variable>(); // This should probably be stored when compiling?
-			for (let bodyStatement in fun.Body.Statements)
+			var localVars = scope List<Node.Variable>(); // This should probably be stored when compiling?
+			for (let bodyNode in fun.Body.Nodes)
 			{
-				if (var localFun = bodyStatement as Stmt.Function)
+				if (var localFun = bodyNode as Node.Function)
 				{
 					if (localFun.Kind == .LocalFunction)
 					{
@@ -237,11 +237,11 @@ public class Transpiler
 						outLexeme.AppendLine(scope $" {localFunName}_Context;");
 						*/
 
-						stmtToString(ref outLexeme, bodyStatement);
+						stmtToString(ref outLexeme, bodyNode);
 						// m_outputH.AppendLine();
 					}
 				}
-				if (var @var = bodyStatement as Stmt.Variable)
+				if (var @var = bodyNode as Node.Variable)
 				{
 					localVars.Add(@var);
 				}
@@ -256,39 +256,39 @@ public class Transpiler
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
-				for (let bodyStatement in fun.Body.Statements)
+				for (let bodyNode in fun.Body.Nodes)
 				{
-					if (let localFun = bodyStatement as Stmt.Function)
+					if (let localFun = bodyNode as Node.Function)
 					{
 						if (localFun.Kind == .LocalFunction)
 							continue;
 					}
-					stmtToString(ref outLexeme, bodyStatement);
+					stmtToString(ref outLexeme, bodyNode);
 				}
 			}
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
 		}
 
-		if (let block = stmt as Stmt.Block)
+		if (let block = stmt as Node.Block)
 		{
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
-			for (let blockStatement in block.Statements)
+			for (let blockNode in block.Nodes)
 			{
-				stmtToString(ref outLexeme, blockStatement);
+				stmtToString(ref outLexeme, blockNode);
 			}
 			outLexeme.DecreaseTab();
 			outLexeme.AppendLine("}");
 		}
 
-		if (let expr = stmt as Stmt.Expression)
+		if (let expr = stmt as Node.Expression)
 		{
 			let line = expressionToString(.. scope .(), expr.InnerExpression);
 			outLexeme.AppendLine(scope $"{line};");
 		}
 
-		if (let @var = stmt as Stmt.Variable)
+		if (let @var = stmt as Node.Variable)
 		{
 			let outStr = scope String();
 			let initializerStr = expressionToString(.. scope .(), @var.Initializer);
@@ -313,13 +313,13 @@ public class Transpiler
 			outLexeme.AppendLine(outStr);
 		}
 
-		if (let ret = stmt as Stmt.Return)
+		if (let ret = stmt as Node.Return)
 		{
 			let lexeme = expressionToString(..scope .(), ret.Value);
 			outLexeme.AppendLine(scope $"return {lexeme};");
 		}
 
-		if (let @if = stmt as Stmt.If)
+		if (let @if = stmt as Node.If)
 		{
 			let args = expressionToString(.. scope .(), @if.Condition);
 			outLexeme.AppendLine(scope $"if ({args})");
@@ -334,7 +334,7 @@ public class Transpiler
 			}
 		}
 
-		if (let @while = stmt as Stmt.While)
+		if (let @while = stmt as Node.While)
 		{
 			let args = expressionToString(.. scope .(), @while.Condition);
 			outLexeme.AppendLine(scope $"while ({args})");
@@ -342,7 +342,7 @@ public class Transpiler
 			stmtToString(ref outLexeme, @while.Body);
 		}
 
-		if (let cembed = stmt as Stmt.CEmbed)
+		if (let cembed = stmt as Node.CEmbed)
 		{
 			let bodyText = cembed.Code;
 			for (let line in bodyText.Split('\n'))

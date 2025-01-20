@@ -34,12 +34,12 @@ export class Extension {
             command: "D:/Zen/build/Debug_Win64/ZenLsp/ZenLsp.exe"
         };
 
-        execFile("D:/Zen/build/Debug_Win64/ZenLsp/ZenLsp.exe", [ "--port=5556" ]);
+        // execFile("D:/Zen/build/Debug_Win64/ZenLsp/ZenLsp.exe", [ "--port=1337" ]);
         setTimeout(() => {
             if (true) {
                 serverOptions = () => {
                     let socket = net.createConnection({
-                        port: 5556
+                        port: 1337
                     });
             
                     let result: StreamInfo = {

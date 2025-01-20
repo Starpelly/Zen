@@ -20,7 +20,7 @@ public abstract class LspServer
 		start();
 	}
 
-	public void StartTcp(int port)
+	public void StartTcp(int32 port)
 	{
 		Log.AddLogger(new ConsoleLogger());
 		Log.Info("Starting server on port {}", port);

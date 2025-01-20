@@ -1,0 +1,21 @@
+namespace Pepsi;
+
+public const double PI = 3.14159265358979323846;
+
+public struct Vector2
+{
+    public var float x;
+    public var float y;
+
+    public fun self(let float x, let float y)
+    {
+        cembed("""
+        return CLITERAL(Raylib_Vector2) { x, y };
+        """);
+    }
+}
+
+public fun void Jai()
+{
+
+}

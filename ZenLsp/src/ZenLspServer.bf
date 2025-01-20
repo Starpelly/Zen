@@ -18,13 +18,13 @@ public class ZenLspServer : LspServer
 
 	public void Start(String[] args)
 	{
-		int port = -1;
+		int32 port = -1;
 
 		for (let arg in args)
 		{
 			if (arg.StartsWith("--port="))
 			{
-				if (int.Parse(arg[7...]) case .Ok(let val))
+				if (int32.Parse(arg[7...]) case .Ok(let val))
 					port = val;
 			}
 		}

@@ -96,7 +96,6 @@ public class ParseError : Zen.Builder.ICompilerError
 
 public class Parser
 {
-
 	public enum PrimitiveType
 	{
 		Void = 0,
@@ -156,7 +155,11 @@ public class Parser
 
 		while (!isAtEnd() && !m_hadErrors)
 		{
-			m_nodes.Add(declaration());
+			let decl = declaration();
+			if (decl != null)
+			{
+				m_nodes.Add(decl);
+			}
 		}
 
 		if (m_hadErrors)

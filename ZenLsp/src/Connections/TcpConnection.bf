@@ -9,7 +9,7 @@ namespace ZenLsp.Connections;
 public class TcpConnection : IConnection
 {
 	private LspServer m_server;
-	private int m_port;
+	private int32 m_port;
 
 	private Thread m_thread ~ delete _;
 	private bool m_open;
@@ -21,7 +21,7 @@ public class TcpConnection : IConnection
 	private Monitor m_bufferMonitor ~ delete _;
 	private RecvBuffer m_buffer ~ delete _;
 
-	public this(LspServer server, int port)
+	public this(LspServer server, int32 port)
 	{
 		this.m_server = server;
 		this.m_port = port;
@@ -45,7 +45,7 @@ public class TcpConnection : IConnection
 		m_client.Blocking = false;
 
 		// Connection
-		if (m_listener.Listen(5556) case .Err)
+		if (m_listener.Listen(m_port) case .Err)
 		{
 			Log.Error("Error on listen.");
 			return .Err;

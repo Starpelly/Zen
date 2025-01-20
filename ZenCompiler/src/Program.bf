@@ -20,6 +20,7 @@ class Program
 		public String OutputBuildDir = null ~ delete _;
 		public bool BuildWithTCC = false;
 		public bool RunAfterBuild = false;
+		public bool PrintAST = false;
 	}
 
 	public static mixin ToStringViewList(StringSplitEnumerator e, List<StringView> into)
@@ -51,6 +52,9 @@ class Program
 				break;
 			case "-run":
 				cliArgs.RunAfterBuild = true;
+				break;
+			case "-ast":
+				cliArgs.PrintAST = true;
 				break;
 			}
 		}
@@ -124,6 +128,12 @@ class Program
 			Console.WriteLine("============================");
 			Console.ResetColor();
 			process.Start(processInfo);
+		}
+
+		if (cliArgs.PrintAST)
+		{
+			Console.WriteLine("AST:");
+			builder.PrintAST();
 		}
 
 		return (builder.HadErrors) ? 1 : 0;

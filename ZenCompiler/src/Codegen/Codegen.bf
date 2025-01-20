@@ -87,7 +87,7 @@ public class Codegen
 						m_outputH.AppendEmptyLine();
 				}
 
-				if (node.GetType() == typeof(Node.Function))
+				if (node.GetType() == .Function)
 				{
 					stmtToStringHeader(ref m_outputH, node);
 				}
@@ -121,6 +121,7 @@ public class Codegen
 
 	public static void WriteNamespace(String outStr, NamespaceList tokens)
 	{
+		if (tokens == null) return;
 		for (let token in tokens)
 		{
 			outStr.Append(scope $"{token.Lexeme}_");

@@ -28,6 +28,12 @@ public class ZenNamespace
 		this.m_identifiers = identifiers;
 	}
 
+	public enum FindIdentifierError : uint8
+	{
+		NOT_FOUND = 0,
+		BAD_CAST
+	}
+
 	public bool FindIdentifier<T>(StringView name, out T func) where T : Identifier
 	{
 		if (m_identifiers.TryGetValue(name, let val))

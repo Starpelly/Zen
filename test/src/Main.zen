@@ -1,8 +1,8 @@
-using System;
+// using System;
+using Pepsi;
+using DrPepper;
 
 namespace Sandbox;
-
-public const double PI = 3.14159265358979323846;
 
 public fun void Main()
 {
@@ -10,4 +10,21 @@ public fun void Main()
 	// Console::TestMessageBox("Hello, World!", "Title");
 
 	// RunGame();
+
+	Rust(Vector2(0, 0));
+	Sandbox::Jai();
+	Pepsi::Jai();
+	DrPepper::Hello::Jai();
+
+	// let double pi = Pepsi::PI;
+}
+
+public fun void Rustt(let Vector2 vector)
+{
+
+}
+
+public fun void Jai()
+{
+
 }

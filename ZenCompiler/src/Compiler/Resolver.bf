@@ -85,7 +85,7 @@ public class Resolver
 	public Result<ZenEnvironment> Resolve(List<Node> nodes)
 	{
 		// 1. Define types
-		resolveDefinitions(nodes);
+		resolveTypes(nodes);
 
 		// 2. Type checking
 		for (let node in nodes)
@@ -98,7 +98,7 @@ public class Resolver
 		return .Ok(m_environment);
 	}
 
-	private void resolveDefinitions(List<Node> nodes)
+	private void resolveTypes(List<Node> nodes)
 	{
 		for (let stmt in nodes)
 		{
@@ -123,10 +123,6 @@ public class Resolver
 		if (let @struct = stmt as Node.Struct)
 		{
 			visitStructStmtDefinition(@struct);
-		}
-		if (let @var = stmt as Node.Variable)
-		{
-			visitVariableStmtDefinition(@var);
 		}
 	}
 
@@ -386,7 +382,7 @@ public class Resolver
 		// Resolve parameters
 		for (let param in stmt.Parameters)
 		{
-			resolveStmtDefn(param);
+			visitVariableNode(param);
 		}
 
 		beginScope();
@@ -458,8 +454,10 @@ public class Resolver
 	// Variables
 	// ----------------------------------------------------------------
 
+	/*
 	private void visitVariableStmtDefinition(Node.Variable stmt)
 	{
+		/*
 		if (let nonPrim = stmt.Type as NonPrimitiveDataType)
 		{
 			if (nonPrim.Namespace == null)
@@ -472,10 +470,28 @@ public class Resolver
 				nonPrim.Namespace.AddRange(_);
 			}
 		}
+		*/
 	}
+	*/
 
 	private void visitVariableNode(Node.Variable stmt)
 	{
+		// Check if type exists
+		{
+			if (let nonPrim = stmt.Type as NonPrimitiveDataType)
+			{
+				if (nonPrim.Namespace == null)
+					nonPrim.Namespace = new .();
+
+				let _ = scope NamespaceList();
+				if (ZenIdentifierExistCheckUsings<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenConst))
+				{
+					nonPrim.Namespace.Clear();
+					nonPrim.Namespace.AddRange(_);
+				}
+			}
+		}
+
 		if (m_scopes.Count == 0) return;
 
 		addIdentifierToBackScope(stmt.Name, stmt);
@@ -559,9 +575,40 @@ public class Resolver
 	// Expressions
 	// ----------------------------------------------------------------
 
+	private Result<TIdentifier> ZenIdentifierExistCheckNamespace<TIdentifier>(Token name, NamespaceList namespaces, bool reportErrors) where TIdentifier : Identifier
+	{
+		mixin notAvailableError()
+		{
+			if (reportErrors)
+			{
+				ThrowError(.IDENTIFIER_NOT_FOUND, name);
+			}
+			return .Err;
+		}
+
+		let namespaceKey = namespaces.NamespaceListToString(.. scope .());
+		if (m_environment.Get(namespaceKey) case .Ok(let val))
+		{
+			let zenNamespace = val.Get<ZenNamespace>();
+
+			if (zenNamespace.FindIdentifier<TIdentifier>(name.Lexeme, let zenIdentifier))
+			{
+				return .Ok(zenIdentifier);
+			}
+			else
+			{
+				notAvailableError!();
+			}
+		}
+		else
+		{
+			notAvailableError!();
+		}
+	}
+
 	/// Checks if an identifier exists, taking into consideration the usings in the current file, the current namespace, and the token supplied.
 	/// Ref `namespaces` is used to add onto any namespaces so it can be safely sent to the transpiler.
-	private Result<TIdentifier> ZenIdentifierExistCheck<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, bool reportErrors) where TIdentifier : Identifier
+	private Result<TIdentifier> ZenIdentifierExistCheckUsings<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, bool reportErrors) where TIdentifier : Identifier
 	{
 		newNamespaces.AddRange(namespaces);
 
@@ -579,95 +626,96 @@ public class Resolver
 			return .Err;
 		}
 
-		mixin ambigRefError(Token one, Token two)
+		mixin ambigRefError(NamespaceList nsOne, Token one, NamespaceList nsTwo, Token two)
 		{
 			if (reportErrors)
 			{
-				let childNString = scope String();
-				for (let child in namespaces)
-				{
-					childNString.Append("::");
-					childNString.Append(child.Lexeme);
-				}
-				childNString.Append("::");
-				childNString.Append(name.Lexeme);
-
-				ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{one.Lexeme}{childNString}", scope $"{two.Lexeme}{childNString}");
+				ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{nsOne.NamespaceListToString(.. scope .())}::{one.Lexeme}", scope $"{nsTwo.NamespaceListToString(.. scope .())}::{two.Lexeme}");
 			}
 			return .Err;
 		}
 
-		// Check if the identifier we're looking for is global.
+		var foundIdentifierInLocal = false;
+		var foundIdentifierLocal = default(TIdentifier);
+		var foundIdentifierInUsings = false;
+		var foundIdentifierUsings = scope List<(Node.Using, TIdentifier)>();
+
 		if (newNamespaces.Count > 0)
 		{
-			let namespaceKey = newNamespaces.NamespaceListToString(.. scope .());
-
-			/*
-			if (m_environment.Get(namespaceKey) case .Ok)
+			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, newNamespaces, reportErrors) case .Ok(let identifier))
 			{
-				return .Err;
+				return .Ok(identifier);
 			}
-			*/
+			return .Err;
+		}
+		else
+		{
+			// Fist, check the current namespace for the identifier.
+			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, m_currentNamespace.List, false) case .Ok(let identifier))
+			{
+				// Great! We found this identifier in out current namespace!
+				// We can just return it from here, we still have the else check just in case this method fails.
 
-			var foundUsing = false;
-			var foundUsings = scope NamespaceList();
-			var foundUsingName = default(Token);
+				foundIdentifierInLocal = true;
+				foundIdentifierLocal = identifier;
 
+				// return identifier;
+			}
+
+			// Next, check for the identifier in the current file's usings.
 			for (let @using in m_currentUsings)
 			{
-				let usingCheckKey = scope $"{@using.Name.Lexeme}::{namespaceKey}";
-				if (m_environment.Get(usingCheckKey) case .Ok)
+				// This is utterly fucking retarded.
+				let _ = scope NamespaceList(1);
+				_.Add(@using.Name);
+
+				if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, _, false) case .Ok(let identifier))
 				{
-					if (foundUsing)
+					if (foundIdentifierInLocal)
 					{
-						ambigRefError!(foundUsings[0], @using.Name);
+						let one = m_currentNamespace.List;
+						let two = scope NamespaceList(1);
+						two.Add(@using.Name);
+
+						ambigRefError!(one, foundIdentifierLocal.Name, two, name);
 					}
+					else
+					{
+						if (foundIdentifierInUsings)
+						{
+							let one = scope NamespaceList(1);
+							let two = scope NamespaceList(1);
 
-					// addNamespaceToExpr(@using.Name);
-					foundUsing = true;
-					foundUsings.Add(@using.Name);
-					foundUsingName = @using.Name;
+							one.Add(foundIdentifierUsings[0].0.Name);
+							two.Add(@using.Name);
+
+							ambigRefError!(one, name, two, name);
+						}
+
+						foundIdentifierInUsings = true;
+						foundIdentifierUsings.Add((@using, identifier));
+					}
 				}
 			}
 
-			if (!foundUsing)
+			// Check for an identifier conflict.
+			if (foundIdentifierInLocal == true && foundIdentifierInUsings == true)
 			{
-				if (m_environment.Get(namespaceKey) case .Err)
-				{
-					addNamespaceToExpr(m_currentNamespace.Front);
-				}
+				let two = scope NamespaceList(1);
+				two.Add(foundIdentifierUsings[0].0.Name);
+				ambigRefError!(m_currentNamespace.List, foundIdentifierLocal.Name, two, foundIdentifierLocal.Name);
 			}
-			else
-			{
-				addNamespaceToExpr(foundUsingName);
-			}
-		}
-		else
-		{
-			// If it is global, we can cheat and just add the current push the current namespace so the compiler thinks it's part of the namespace.
-			//
-			// We've already checked for duplicates earlier in the identifier definition.
-			addNamespaceToExpr(m_currentNamespace.Front);
-		}
 
-		let namespaceKey = newNamespaces.NamespaceListToString(.. scope .());
-		if (m_environment.Get(namespaceKey) case .Ok(let val))
-		{
-			let zenNamespace = val.Get<ZenNamespace>();
+			if (foundIdentifierInLocal)
+			{
+				return .Ok(foundIdentifierLocal);
+			}
+			else if (foundIdentifierInUsings)
+			{
+				return .Ok(foundIdentifierUsings[0].1);
+			}
 
-			if (zenNamespace.FindIdentifier<TIdentifier>(name.Lexeme, let zenFunc))
-			{
-				// let zenFuncNamespace = zenFunc.Declaration.Namespace;
-				return .Ok(zenFunc);
-			}
-			else
-			{
-				notAvailableError!();
-			}
-		}
-		else
-		{
-			notAvailableError!();
+			return .Err;
 		}
 	}
 
@@ -676,7 +724,7 @@ public class Resolver
 		let newNamespaces = scope NamespaceList();
 		if (expr.Namespaces == null)
 			expr.Namespaces = new .();
-		let result = ZenIdentifierExistCheck<TIdentifier>(name, expr.Namespaces, newNamespaces, reportErrors);
+		let result = ZenIdentifierExistCheckUsings<TIdentifier>(name, expr.Namespaces, newNamespaces, reportErrors);
 
 		expr.Namespaces.Clear();
 		expr.Namespaces.AddRange(newNamespaces);
@@ -761,6 +809,7 @@ public class Resolver
 			}
 		}
 
+		// Check if the call is a constructor.
 		if (ZenIdentifierExistCheckExpr<ZenStruct, Expr.Call>(expr, expr.Callee.Name, false) case .Ok(let zenStruct))
 		{
 			expr.Callee.Namespaces = new .();
@@ -787,7 +836,7 @@ public class Resolver
 			return;
 		}
 
-		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
+		// ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
 	}
 
 	private void visitBinaryExpr(Expr.Binary expr)
@@ -835,7 +884,7 @@ public class Resolver
 					if (let nonPrim = variable.Type as NonPrimitiveDataType)
 					{
 						let _ = scope NamespaceList();
-						if (ZenIdentifierExistCheck<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenStruct))
+						if (ZenIdentifierExistCheckUsings<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenStruct))
 						{
 							// Structs should probably store these...
 							for (let node in zenStruct.Declaration.Body.Nodes)

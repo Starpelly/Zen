@@ -5,31 +5,84 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
+public enum NodeType
+{
+	Using,
+	Namespace,
+	Block,
+	Expression,
+	CEmbed,
+	Function,
+	Const,
+	Struct,
+	Print, // Deprecated
+	Return,
+	If,
+	While,
+	Variable,
+	EOF
+}
+
+[AttributeUsage(.Class, .ReflectAttribute, ReflectUser = .Type)]
+public struct RegisterNodeAttribute : Attribute, IOnTypeInit
+{
+	public NodeType Type;
+
+	public this(NodeType type)
+	{
+		this.Type = type;
+	}
+
+	[Comptime]
+	public void OnTypeInit(Type type, Self* prev)
+	{
+		Compiler.EmitTypeBody(type, "public override NodeType GetType() {");
+		Compiler.EmitTypeBody(type, scope $"return NodeType.{Type};");
+		Compiler.EmitTypeBody(type, "}");
+	}
+}
+
 public abstract class Node
 {
+	public abstract NodeType GetType();
+
 	public interface IIdentifier
 	{
 		public Namespace Namespace { get; }
 	}
 
-	public class Parameter : Node
+	// @NOTE
+	// Parameters are deprecated because they're essentially variables,
+	// but parameters in C# can have `in`, `ref`, and `out` modifiers.
+	//
+	// This should probably be investigated.
+	// - Starpelly, 1/20/25
+ 	//
+	[RegisterNode(.Variable)]
+	public class Variable : Node
 	{
-		public Token Type { get; }
 		public Token Name { get; }
-		public Token Accessor { get; }
+		public DataType Type { get; } ~ delete _;
+		public Expr Initializer { get; } ~ delete _;
+		public bool Mutable { get; }
 
-		public this(Token type, Token name, Token accessor)
+		public bool HasInitializer => Initializer != null;
+
+		public this(Token name, DataType type, Expr initializer, bool mutable)
 		{
-			this.Type = type;
 			this.Name = name;
-			this.Accessor = accessor;
+			this.Type = type;
+			this.Initializer = initializer;
+			this.Mutable = mutable;
 		}
 	}
 
+	[RegisterNode(.EOF)]
 	public class EOF : Node
 	{
 	}
 
+	[RegisterNode(.Using)]
 	public class Using : Node
 	{
 		public Token Name { get; }
@@ -40,6 +93,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Namespace)]
 	public class Namespace : Node
 	{
 		public NamespaceList List { get; } ~ delete _;
@@ -56,6 +110,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Block)]
 	public class Block : Node
 	{
 		public List<Node> Nodes { get; } ~ DeleteContainerAndItems!(_);
@@ -66,6 +121,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Expression)]
 	public class Expression : Node
 	{
 		public Expr InnerExpression { get; } ~ delete _;
@@ -76,6 +132,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.CEmbed)]
 	public class CEmbed : Node
 	{
 		public String Code { get; } ~ delete _;
@@ -86,6 +143,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Function)]
 	public class Function : Node, IIdentifier
 	{
 		public enum FunctionKind
@@ -130,6 +188,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Const)]
 	public class Const : Node, IIdentifier
 	{
 		public Token Name { get; }
@@ -146,6 +205,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Struct)]
 	public class Struct : Node, IIdentifier
 	{
 		public Token Name { get; }
@@ -160,6 +220,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Print)]
 	public class Print : Node
 	{
 		public Expr InnerExpression { get; } ~ delete _;
@@ -170,6 +231,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.Return)]
 	public class Return : Node
 	{
 		public Token Keyword { get; }
@@ -182,6 +244,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.If)]
 	public class If : Node
 	{
 		public Expr Condition { get; } ~ delete _;
@@ -196,6 +259,7 @@ public abstract class Node
 		}
 	}
 
+	[RegisterNode(.While)]
 	public class While : Node
 	{
 		public Expr Condition { get; } ~ delete _;
@@ -205,24 +269,6 @@ public abstract class Node
 		{
 			this.Condition = condition;
 			this.Body = body;
-		}
-	}
-
-	public class Variable : Node
-	{
-		public Token Name { get; }
-		public DataType Type { get; } ~ delete _;
-		public Expr Initializer { get; } ~ delete _;
-		public bool Mutable { get; }
-
-		public bool HasInitializer => Initializer != null;
-
-		public this(Token name, DataType type, Expr initializer, bool mutable)
-		{
-			this.Name = name;
-			this.Type = type;
-			this.Initializer = initializer;
-			this.Mutable = mutable;
 		}
 	}
 }

@@ -5,8 +5,43 @@ using Zen.Lexer;
 
 namespace Zen.Parser;
 
+public enum ExprType
+{
+	Binary,
+	Variable,
+	Call,
+	Logical,
+	Literal,
+	Unary,
+	Get,
+	Set,
+	Grouping,
+	Assign
+}
+
+[AttributeUsage(.Class, .ReflectAttribute, ReflectUser = .Type)]
+public struct RegisterExprAttribute : Attribute, IOnTypeInit
+{
+	public ExprType Type;
+
+	public this(ExprType type)
+	{
+		this.Type = type;
+	}
+
+	[Comptime]
+	public void OnTypeInit(Type type, Self* prev)
+	{
+		Compiler.EmitTypeBody(type, "public override ExprType GetType() {");
+		Compiler.EmitTypeBody(type, scope $"return ExprType.{Type};");
+		Compiler.EmitTypeBody(type, "}");
+	}
+}
+
 public abstract class Expr
 {
+	public abstract ExprType GetType();
+
 	public interface IHaveType
 	{
 		public abstract DataType GetType();
@@ -17,6 +52,7 @@ public abstract class Expr
 		public NamespaceList Namespaces { get; set; }
 	}
 
+	[RegisterExpr(.Binary)]
 	public class Binary : Expr
 	{
 		public Expr Left { get; } ~ delete _;
@@ -31,6 +67,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Variable)]
 	public class Variable : Expr, IHaveNamespaces
 	{
 		public Token Name { get; set; }
@@ -43,6 +80,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Call)]
 	public class Call : Expr, IHaveNamespaces
 	{
 		public Expr.Variable Callee { get; } ~ delete _;
@@ -59,6 +97,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Logical)]
 	public class Logical : Expr
 	{
 		public Expr Left { get; } ~ delete _;
@@ -73,6 +112,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Literal)]
 	public class Literal : Expr
 	{
 		public DataType Type { get; } ~ delete _;
@@ -86,7 +126,7 @@ public abstract class Expr
 			this.Value = value;
 		}
 
-		public String GetTypeName() // temp
+		public String GetTypeName() // @Temp
 		{
 			switch (Token.Type)
 			{
@@ -99,6 +139,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Unary)]
 	public class Unary : Expr
 	{
 		public Token Operator { get; }
@@ -111,6 +152,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Get)]
 	public class Get : Expr
 	{
 		public Expr Object { get; } ~ delete _;
@@ -123,6 +165,22 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Set)]
+	public class Set : Expr
+	{
+		public Expr Object { get; } ~ delete _;
+		public Token Name { get; }
+		public Expr Value { get; }
+
+		public this(Expr object, Token name, Expr value)
+		{
+			this.Object = object;
+			this.Name = name;
+			this.Value = value;
+		}
+	}
+
+	[RegisterExpr(.Grouping)]
 	public class Grouping : Expr
 	{
 		public Expr Expression { get; } ~ delete _;
@@ -133,6 +191,7 @@ public abstract class Expr
 		}
 	}
 
+	[RegisterExpr(.Assign)]
 	public class Assign : Expr
 	{
 		public Expr Name { get; } ~ delete _;

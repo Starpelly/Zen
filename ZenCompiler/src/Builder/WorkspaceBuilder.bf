@@ -208,6 +208,18 @@ public class WorkspaceBuilder
 		}
 	}
 
+	public void PrintAST()
+	{
+		// Print AST
+		{
+			let astPrinter = scope ASTPrinter();
+			for (let node in m_nodes)
+			{
+				Console.WriteLine(astPrinter.PrintNode(.. scope .(), node));
+			}
+		}
+	}
+
 	// -----------------------------------------------------------------------
 	// Private Functions
 	// -----------------------------------------------------------------------

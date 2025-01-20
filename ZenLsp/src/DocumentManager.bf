@@ -103,7 +103,7 @@ public class Document
 		m_parser = new Parser(tokens);
 		m_parser.Parse().IgnoreError();
 
-		ZenLspServer.GlobalWorkspace.ReplaceAST(path, m_parser.Statements);
+		ZenLspServer.GlobalWorkspace.ReplaceAST(path, m_parser.Nodes);
 	}
 }
 

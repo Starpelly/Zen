@@ -1,0 +1,16 @@
+namespace DrPepper::Hello;
+
+public struct Vector2
+{
+    
+}
+
+public struct Vector3
+{
+
+}
+
+public fun void Jai()
+{
+
+}

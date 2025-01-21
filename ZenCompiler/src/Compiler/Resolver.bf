@@ -90,7 +90,7 @@ public class Resolver
 		// 2. Type checking
 		for (let node in nodes)
 		{
-			resolveStmtBody(node);
+			resolveNodeBody(node);
 		}
 
 		if (m_hadErrors)
@@ -100,93 +100,91 @@ public class Resolver
 
 	private void resolveTypes(List<Node> nodes)
 	{
-		for (let stmt in nodes)
+		for (let node in nodes)
 		{
-			resolveStmtDefn(stmt);
+			resolveNodeDefn(node);
 		}
 	}
 
-	private void resolveStmtDefn(Node stmt)
+	private void resolveNodeDefn(Node node)
 	{
-		if (let @namespace = stmt as Node.Namespace)
+		let type = node.GetType();
+		switch (type)
 		{
-			visitNamespaceStmtDefinition(@namespace);
-		}
-		if (let fun = stmt as Node.Function)
-		{
-			visitFunctionStmtDefinition(fun);
-		}
-		if (let @const = stmt as Node.Const)
-		{
-			visitConstStmtDefinition(@const);
-		}
-		if (let @struct = stmt as Node.Struct)
-		{
-			visitStructStmtDefinition(@struct);
+		case .Namespace:
+			visitNamespaceNodeDefinition((Node.Namespace)node);
+			break;
+		case .Function:
+			visitFunctionNodeDefinition((Node.Function)node);
+			break;
+		case .Const:
+			visitConstNodeDefinition((Node.Const)node);
+			break;
+		case .Struct:
+			visitStructNodeDefinition((Node.Struct)node);
+			break;
+		default:
 		}
 	}
 
-	private void resolveStmtBody(Node stmt)
+	private void resolveNodeBody(Node node)
 	{
-		if (let @using = stmt as Node.Using)
+		let type = node.GetType();
+		switch (type)
 		{
-			visitUsingNodeBody(@using);
-		}
-		if (let @namespace = stmt as Node.Namespace)
-		{
-			visitNamespaceNodeBody(@namespace);
-		}
-		if (let fun = stmt as Node.Function)
-		{
-			visitFunctionNodeBody(fun);
-		}
-		if (let block = stmt as Node.Block)
-		{
-			visitBlockNode(block);
-		}
-		if (let @var = stmt as Node.Variable)
-		{
-			visitVariableNode(@var);
-		}
-		if (let ret = stmt as Node.Return)
-		{
-			visitReturnNode(ret);
-		}
-		if (let expr = stmt as Node.Expression)
-		{
-			visitExpressionNode(expr);
-		}
-		if (let @if = stmt as Node.If)
-		{
-			visitIfNode(@if);
-		}
-		if (let @while = stmt as Node.While)
-		{
-			visitWhileNode(@while);
-		}
-		if (let eof = stmt as Node.EOF)
-		{
-			visitEOFNode(eof);
+		case .Using:
+			visitUsingNodeBody((Node.Using)node);
+			break;
+		case .Namespace:
+			visitNamespaceNodeBody((Node.Namespace)node);
+			break;
+		case .Function:
+			visitFunctionNodeBody((Node.Function)node);
+			break;
+		case .Block:
+			visitBlockNode((Node.Block)node);
+			break;
+		case .Variable:
+			visitVariableNode((Node.Variable)node);
+			break;
+		case .Return:
+			visitReturnNode((Node.Return)node);
+			break;
+		case .Expression:
+			visitExpressionNode((Node.Expression)node);
+			break;
+		case .If:
+			visitIfNode((Node.If)node);
+			break;
+		case .While:
+			visitWhileNode((Node.While)node);
+			break;
+		case .EOF:
+			visitEOFNode((Node.EOF)node);
+			break;
+		default:
 		}
 	}
 
 	private void resolveExpr(Expr expr)
 	{
-		if (let call = expr as Expr.Call)
+		let type = expr.GetType();
+
+		switch (type)
 		{
-			visitCallExpr(call);
-		}
-		if (let variable = expr as Expr.Variable)
-		{
-			visitVariableExpr(variable);
-		}
-		if (let binary = expr as Expr.Binary)
-		{
-			visitBinaryExpr(binary);
-		}
-		if (let assign = expr as Expr.Assign)
-		{
-			visitAssignExpr(assign);
+		case .Call:
+			visitCallExpr((Expr.Call)expr);
+			break;
+		case .Variable:
+			visitVariableExpr((Expr.Variable)expr);
+			break;
+		case .Binary:
+			visitBinaryExpr((Expr.Binary)expr);
+			break;
+		case .Assign:
+			visitAssignExpr((Expr.Assign)expr);
+			break;
+		default:
 		}
 	}
 
@@ -325,7 +323,7 @@ public class Resolver
 	// Namespace
 	// ----------------------------------------------------------------
 
-	private void visitNamespaceStmtDefinition(Node.Namespace stmt)
+	private void visitNamespaceNodeDefinition(Node.Namespace stmt)
 	{
 		// let enclosingNamespace = m_currentNamespace;
 		m_currentNamespace = stmt;
@@ -359,7 +357,7 @@ public class Resolver
 	// Functions
 	// ----------------------------------------------------------------
 
-	private ZenFunction visitFunctionStmtDefinition(Node.Function stmt)
+	private ZenFunction visitFunctionNodeDefinition(Node.Function stmt)
 	{
 		let fun = new ZenFunction(stmt);
 		if (m_currentStruct != null)
@@ -392,7 +390,7 @@ public class Resolver
 				addIdentifierToBackScope(param.Name, param);
 			}
 
-			resolveStmtBody(stmt.Body);
+			resolveNodeBody(stmt.Body);
 		}
 		endScope();
 
@@ -403,7 +401,7 @@ public class Resolver
 	// Const
 	// ----------------------------------------------------------------
 
-	private void visitConstStmtDefinition(Node.Const stmt)
+	private void visitConstNodeDefinition(Node.Const stmt)
 	{
 		let @const = new ZenConst(stmt);
 		AddIdentifier(@const);
@@ -413,7 +411,7 @@ public class Resolver
 	// Struct
 	// ----------------------------------------------------------------
 
-	private void visitStructStmtDefinition(Node.Struct stmt)
+	private void visitStructNodeDefinition(Node.Struct stmt)
 	{
 		let @struct = new ZenStruct(stmt);
 		AddIdentifier(@struct);
@@ -443,7 +441,7 @@ public class Resolver
 					delete fun.Type;
 					fun.Type = new NonPrimitiveDataType(stmt.Name)..SetNamespace(stmt.Namespace.List);
 
-					let zenFunc = visitFunctionStmtDefinition(fun);
+					let zenFunc = visitFunctionNodeDefinition(fun);
 					@struct.Constructor = zenFunc;
 				}
 			}
@@ -533,8 +531,8 @@ public class Resolver
 	private void visitIfNode(Node.If stmt)
 	{
 		resolveExpr(stmt.Condition);
-		resolveStmtBody(stmt.ThenBranch);
-		if (stmt.ElseBranch != null) resolveStmtBody(stmt.ElseBranch);
+		resolveNodeBody(stmt.ThenBranch);
+		if (stmt.ElseBranch != null) resolveNodeBody(stmt.ElseBranch);
 	}
 
 	// ----------------------------------------------------------------
@@ -544,7 +542,7 @@ public class Resolver
 	private void visitWhileNode(Node.While stmt)
 	{
 		resolveExpr(stmt.Condition);
-		resolveStmtBody(stmt.Body);
+		resolveNodeBody(stmt.Body);
 	}
 
 	// ----------------------------------------------------------------

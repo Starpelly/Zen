@@ -484,7 +484,7 @@ public class Resolver
 					nonPrim.Namespace = new .();
 
 				let _ = scope NamespaceList();
-				if (ZenIdentifierExistCheckUsings<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenConst))
+				if (ZenIdentifierExistCheckUsings<ZenStruct>(stmt.Type.Token, nonPrim.Namespace, _, .ALL) case .Ok(let zenConst))
 				{
 					nonPrim.Namespace.Clear();
 					nonPrim.Namespace.AddRange(_);
@@ -575,15 +575,25 @@ public class Resolver
 	// Expressions
 	// ----------------------------------------------------------------
 
-	private Result<TIdentifier> ZenIdentifierExistCheckNamespace<TIdentifier>(Token name, NamespaceList namespaces, bool reportErrors) where TIdentifier : Identifier
+	public enum IdentifierError
 	{
+		ALL = 0,
+		NONE = 1,
+		AMBIGUOUS = _*2,
+		NOT_FOUND = _*2,
+	}
+
+	private Result<TIdentifier, IdentifierError> ZenIdentifierExistCheckNamespace<TIdentifier>(Token name, NamespaceList namespaces, IdentifierError reportErrorFlags) where TIdentifier : Identifier
+	{
+		let reportAllErrors = reportErrorFlags.HasFlag(.ALL);
+
 		mixin notAvailableError()
 		{
-			if (reportErrors)
+			if (reportAllErrors || reportErrorFlags.HasFlag(.NOT_FOUND))
 			{
 				ThrowError(.IDENTIFIER_NOT_FOUND, name);
 			}
-			return .Err;
+			return .Err(.NOT_FOUND);
 		}
 
 		let namespaceKey = namespaces.NamespaceListToString(.. scope .());
@@ -608,9 +618,10 @@ public class Resolver
 
 	/// Checks if an identifier exists, taking into consideration the usings in the current file, the current namespace, and the token supplied.
 	/// Ref `namespaces` is used to add onto any namespaces so it can be safely sent to the transpiler.
-	private Result<TIdentifier> ZenIdentifierExistCheckUsings<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, bool reportErrors) where TIdentifier : Identifier
+	private Result<TIdentifier, IdentifierError> ZenIdentifierExistCheckUsings<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, IdentifierError reportErrorFlags) where TIdentifier : Identifier
 	{
 		newNamespaces.AddRange(namespaces);
+		let reportAllErrors = reportErrorFlags.HasFlag(.ALL);
 
 		void addNamespaceToExpr(Token namespaceToken)
 		{
@@ -619,20 +630,20 @@ public class Resolver
 
 		mixin notAvailableError()
 		{
-			if (reportErrors)
+			if (reportAllErrors || reportErrorFlags.HasFlag(.NOT_FOUND))
 			{
 				ThrowError(.IDENTIFIER_NOT_FOUND, name);
 			}
-			return .Err;
+			return .Err(.NOT_FOUND);
 		}
 
 		mixin ambigRefError(NamespaceList nsOne, Token one, NamespaceList nsTwo, Token two)
 		{
-			if (reportErrors)
+			if (reportAllErrors || reportErrorFlags.HasFlag(.AMBIGUOUS))
 			{
 				ThrowError(.IDENTIFIER_AMBIGUOUS, name, scope $"{nsOne.NamespaceListToString(.. scope .())}::{one.Lexeme}", scope $"{nsTwo.NamespaceListToString(.. scope .())}::{two.Lexeme}");
 			}
-			return .Err;
+			return .Err(.AMBIGUOUS);
 		}
 
 		var foundIdentifierInLocal = false;
@@ -642,24 +653,21 @@ public class Resolver
 
 		if (newNamespaces.Count > 0)
 		{
-			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, newNamespaces, reportErrors) case .Ok(let identifier))
+			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, newNamespaces, reportErrorFlags) case .Ok(let identifier))
 			{
 				return .Ok(identifier);
 			}
-			return .Err;
+			return .Err(.NOT_FOUND);
 		}
 		else
 		{
 			// Fist, check the current namespace for the identifier.
-			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, m_currentNamespace.List, false) case .Ok(let identifier))
+			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, m_currentNamespace.List, .NONE) case .Ok(let identifier))
 			{
 				// Great! We found this identifier in out current namespace!
-				// We can just return it from here, we still have the else check just in case this method fails.
 
 				foundIdentifierInLocal = true;
 				foundIdentifierLocal = identifier;
-
-				// return identifier;
 			}
 
 			// Next, check for the identifier in the current file's usings.
@@ -669,7 +677,7 @@ public class Resolver
 				let _ = scope NamespaceList(1);
 				_.Add(@using.Name);
 
-				if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, _, false) case .Ok(let identifier))
+				if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, _, .NONE) case .Ok(let identifier))
 				{
 					if (foundIdentifierInLocal)
 					{
@@ -715,16 +723,16 @@ public class Resolver
 				return .Ok(foundIdentifierUsings[0].1);
 			}
 
-			return .Err;
+			return .Err(.NOT_FOUND);
 		}
 	}
 
-	private Result<TIdentifier> ZenIdentifierExistCheckExpr<TIdentifier, TExpr>(TExpr expr, Token name, bool reportErrors) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
+	private Result<TIdentifier, IdentifierError> ZenIdentifierExistCheckExpr<TIdentifier, TExpr>(TExpr expr, Token name, IdentifierError reportErrorFlags) where TIdentifier : Identifier where TExpr : Expr, Expr.IHaveNamespaces
 	{
 		let newNamespaces = scope NamespaceList();
 		if (expr.Namespaces == null)
 			expr.Namespaces = new .();
-		let result = ZenIdentifierExistCheckUsings<TIdentifier>(name, expr.Namespaces, newNamespaces, reportErrors);
+		let result = ZenIdentifierExistCheckUsings<TIdentifier>(name, expr.Namespaces, newNamespaces, reportErrorFlags);
 
 		expr.Namespaces.Clear();
 		expr.Namespaces.AddRange(newNamespaces);
@@ -810,19 +818,37 @@ public class Resolver
 		}
 
 		// Check if the call is a constructor.
-		if (ZenIdentifierExistCheckExpr<ZenStruct, Expr.Call>(expr, expr.Callee.Name, false) case .Ok(let zenStruct))
+		switch (ZenIdentifierExistCheckExpr<ZenStruct, Expr.Call>(expr, expr.Callee.Name, .AMBIGUOUS))
 		{
+		case .Ok(let zenStruct):
 			expr.Callee.Namespaces = new .();
 			expr.Callee.Namespaces.Add(zenStruct.Name);
 			expr.Callee.Name = Token(expr.Callee.Name.Type, expr.Callee.Name.Literal, "self", expr.Callee.Name.File, expr.Callee.Name.Line, expr.Callee.Name.Col, expr.Callee.Name.ColReal);
 			actuallyCheckFunction(zenStruct.Constructor);
+			return;
+		case .Err(let errorCode):
+			if (errorCode == .AMBIGUOUS)
+			{
+				return;
+			}
+			break;
+		}
+
+		// Check if the call is a function.
+		if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(expr, expr.Callee.Name, .ALL) case .Ok(let zenFunc))
+		{
+			actuallyCheckFunction(zenFunc);
 
 			return;
 		}
-		if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(expr, expr.Callee.Name, true) case .Ok(let zenFunc))
-		{
-			actuallyCheckFunction(zenFunc);
-		}
+
+		// @NOTE
+		// This is misleading because the identifier COULD exist but it could just not be a function or have a constructor.
+		// We would need to handle that in this case.
+		// - Starpelly, 1/21/25
+		//
+
+		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Callee.Name);
 	}
 
 	private void visitVariableExpr(Expr.Variable expr)
@@ -831,7 +857,7 @@ public class Resolver
 		{
 			return;
 		}
-		if (ZenIdentifierExistCheckExpr<ZenConst, Expr.Variable>(expr, expr.Name, true) case .Ok(let zenConst))
+		if (ZenIdentifierExistCheckExpr<ZenConst, Expr.Variable>(expr, expr.Name, .ALL) case .Ok(let zenConst))
 		{
 			return;
 		}
@@ -884,7 +910,7 @@ public class Resolver
 					if (let nonPrim = variable.Type as NonPrimitiveDataType)
 					{
 						let _ = scope NamespaceList();
-						if (ZenIdentifierExistCheckUsings<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, true) case .Ok(let zenStruct))
+						if (ZenIdentifierExistCheckUsings<ZenStruct>(variable.Type.Token, nonPrim.Namespace, _, .ALL) case .Ok(let zenStruct))
 						{
 							// Structs should probably store these...
 							for (let node in zenStruct.Declaration.Body.Nodes)

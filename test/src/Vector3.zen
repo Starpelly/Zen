@@ -1,4 +1,4 @@
-namespace DrPepper::Hello;
+namespace DrPepper;
 
 public struct Vector2
 {

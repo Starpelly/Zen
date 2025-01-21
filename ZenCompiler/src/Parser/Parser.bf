@@ -361,12 +361,12 @@ public class Parser
 				}
 				advance();
 
-				let pType = consume(.Identifier, "Expected parameter type.");
+				let pType = consumeDataType();
 				let pName = consume(.Identifier, "Expected parameter name.");
 
-				let paramType = GetDataTypeFromTypeToken(pType);
+				// let paramType = GetDataTypeFromTypeToken(pType);
 
-				parameters.Add(new .(pName, paramType, null, (accessor.Type == .Var)));
+				parameters.Add(new .(pName, pType, null, (accessor.Type == .Var)));
 			} while(match(.Comma));
 		}
 

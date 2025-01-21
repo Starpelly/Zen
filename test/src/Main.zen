@@ -11,15 +11,23 @@ public fun void Main()
 
 	// RunGame();
 
-	Rust(Vector2(0, 0));
+	Rust(Pepsi::Vector2(0, 0));
+
+/*
 	Sandbox::Jai();
 	Pepsi::Jai();
-	DrPepper::Hello::Jai();
+	DrPepper::Jai();
+*/
 
 	// let double pi = Pepsi::PI;
 }
 
-public fun void Rustt(let Vector2 vector)
+public fun void Rust(let Pepsi::Vector2 vector)
+{
+
+}
+
+public fun void AngelScript()
 {
 
 }

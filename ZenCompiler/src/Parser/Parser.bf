@@ -103,6 +103,7 @@ public class Parser
 		Float = _*2,
 		Double = _*2,
 		Boolean = _*2,
+		Char = _*2,
 		StringView = _*2
 	}
 
@@ -126,6 +127,10 @@ public class Parser
 		("double", 			.Double),
 
 		("bool", 			.Boolean),
+
+		("char8",			.Char),
+		("char16",			.Char),
+		("char32",			.Char),
 
 		("string_view", 	.StringView),
 	} ~ delete _;
@@ -704,6 +709,9 @@ public class Parser
 			var typeName = "";
 			switch (prevToken.Type)
 			{
+			case .Char:
+				typeName = "char8";
+				break;
 			case .String:
 				typeName = "string_view";
 				break;

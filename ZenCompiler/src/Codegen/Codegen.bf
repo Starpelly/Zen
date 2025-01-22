@@ -44,53 +44,7 @@ public class Codegen
 		{
 			if (node != null)
 			{
-				if (let @const = node as Node.Const)
-				{
-					let val = expressionToString(.. scope .(), @const.Initializer);
-					let name = scope String();
-					WriteNamespace(name, @const.Namespace);
-					name.Append(@const.Name.Lexeme);
-
-					m_outputH.AppendLine(scope $"#define {name} {val}");
-				}
-
-				if (let @struct = node as Node.Struct)
-				{
-					let ns = WriteNamespace(.. scope .(), @struct.Namespace);
-
-					m_outputH.AppendLine(scope $"typedef struct \{");
-					m_outputH.IncreaseTab();
-
-					// Structs in C can only have fields.
-					for (let node in @struct.Body.Nodes)
-					{
-						if (let variable = node as Node.Variable)
-						{
-							stmtToString(ref m_outputH, variable);
-						}
-					}
-
-					m_outputH.DecreaseTab();
-					m_outputH.AppendLine("}");
-					m_outputH.Append(scope $" {ns}{@struct.Name.Lexeme};");
-
-					// Struct methods
-					for (let node in @struct.Body.Nodes)
-					{
-						if (let fun = node as Node.Function)
-						{
-							stmtToStringHeader(ref m_outputH, fun);
-						}
-					}
-
-					if (node != Nodes.Back) // @Speed - slow probably...
-						m_outputH.AppendEmptyLine();
-				}
-
-				if (node.GetType() == .Function)
-				{
-					stmtToStringHeader(ref m_outputH, node);
-				}
+				stmtToStringHeader(ref m_outputH, node);
 			}
 		}
 
@@ -136,9 +90,19 @@ public class Codegen
 		outStr.Append(type.Name);
 	}
 
-	private void stmtToStringHeader(ref CodeBuilder outLexeme, Node stmt)
+	private void stmtToStringHeader(ref CodeBuilder outLexeme, Node node)
 	{
-		if (let fun = stmt as Node.Function)
+		if (let @const = node as Node.Const)
+		{
+			let val = expressionToString(.. scope .(), @const.Initializer);
+			let name = scope String();
+			WriteNamespace(name, @const.Namespace);
+			name.Append(@const.Name.Lexeme);
+
+			m_outputH.AppendLine(scope $"#define {name} {val}");
+		}
+
+		if (let fun = node as Node.Function)
 		{
 			let funcName = scope String();
 			if (fun.Kind == .Main)
@@ -172,6 +136,59 @@ public class Codegen
 			}
 			line.Append(");");
 			m_outputH.AppendLine(line);
+		}
+
+		if (let @struct = node as Node.Struct)
+		{
+			if (@struct.Body.Nodes.Count == 0) return; // C requires that a struct or union have at least one member.
+
+			let ns = WriteNamespace(.. scope .(), @struct.Namespace);
+
+			m_outputH.AppendLine("typedef struct {");
+			m_outputH.IncreaseTab();
+
+			// Structs in C can only have fields.
+			for (let bodyNode in @struct.Body.Nodes)
+			{
+				if (let variable = bodyNode as Node.Variable)
+				{
+					stmtToString(ref m_outputH, variable);
+				}
+			}
+
+			m_outputH.DecreaseTab();
+			m_outputH.AppendLine("}");
+			m_outputH.Append(scope $" {ns}{@struct.Name.Lexeme};");
+
+			// Struct methods
+			for (let bodyNode in @struct.Body.Nodes)
+			{
+				if (let fun = bodyNode as Node.Function)
+				{
+					stmtToStringHeader(ref m_outputH, fun);
+				}
+			}
+
+			if (node != Nodes.Back) // @Speed - slow probably...
+				m_outputH.AppendEmptyLine();
+		}
+
+		if (let @enum = node as Node.Enum)
+		{
+			let ns = WriteNamespace(.. scope .(), @enum.Namespace);
+			let outName = scope $"{ns}{@enum.Name.Lexeme}";
+
+			m_outputH.Append("typedef enum {");
+			m_outputH.IncreaseTab();
+			{
+				for (let value in @enum.Values)
+				{
+					m_outputH.AppendLine(scope $"{outName}_{value.Name.Lexeme},");
+				}
+			}
+			m_outputH.DecreaseTab();
+			m_outputH.AppendLine("}");
+			m_outputH.Append(scope $" {outName};");
 		}
 	}
 

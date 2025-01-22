@@ -24,4 +24,10 @@ class Hello
 		let a = Color(255, 255, 255, 255);
 	}
 	*/
+
+	public enum Color
+	{
+		A = 0,
+		// B = 2
+	}
 }

@@ -187,6 +187,8 @@ public class Parser
 			return FunctionNode(.Function);
 		if (match(.Struct))
 			return StructNode();
+		if (match(.Enum))
+			return EnumNode();
 		if (match(.Return))
 			return ReturnNode();
 		if (match(.If))
@@ -432,6 +434,71 @@ public class Parser
 
 		let body = new Node.Block(nodes);
 		return new .(name, body, m_currentNamespace);
+	}
+
+	private Node.Enum EnumNode()
+	{
+		if (past(2).Type != .Public && past(2).Type != .Private)
+		{
+			reportError(peek(), scope $"Expected accessor before 'enum'.");
+		}
+
+		let name = consume(.Identifier, scope $"Expected enum name.");
+
+		consume(.LeftBrace, "Expected '{' before enum body.");
+		var scopeDepth = 0;
+		let values = new List<Node.Enum.EnumValue>();
+
+		m_currentNamespace.List.Add(name);
+
+		var valueIndex = 0;
+		while (true && !isAtEnd())
+		{
+			mixin checkRightBrace()
+			{
+				if (check(.RightBrace))
+				{
+					if (scopeDepth <= 0)
+					{
+						break;
+					}
+
+					scopeDepth--;
+				}
+			}
+
+			if (check(.LeftBrace))
+			{
+				scopeDepth++;
+			}
+			checkRightBrace!();
+
+			if (valueIndex > 0)
+			{
+				consume(.Comma, "Expected comma.");
+
+				// Supports trailing commas.
+				checkRightBrace!();
+			}
+
+			let valueName = consume(.Identifier, "Member name expected.");
+			var literal = default(Expr);
+
+			if (check(.Equal))
+			{
+				literal = Primary();
+			}
+
+			values.Add(new .(valueName, literal));
+
+			valueIndex++;
+		}
+
+		m_currentNamespace.List.PopBack();
+
+		consume(.RightBrace, "Expected '}' after enum body.");
+
+		return new .(name, values, m_currentNamespace);
 	}
 
 	private Node.Print PrintNode()
@@ -856,6 +923,11 @@ public class Parser
 	private void advance()
 	{
 		if (!isAtEnd()) m_current++;
+	}
+
+	private void retreat()
+	{
+		m_current--;
 	}
 
 	private Token peek()

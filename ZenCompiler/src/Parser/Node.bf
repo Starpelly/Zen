@@ -15,6 +15,7 @@ public enum NodeType
 	Function,
 	Const,
 	Struct,
+	Enum,
 	Print, // Deprecated
 	Return,
 	If,
@@ -217,6 +218,33 @@ public abstract class Node
 			this.Name = name;
 			this.Body = body;
 			this.Namespace.List.AddRange(@namespace.List);
+		}
+	}
+
+	[RegisterNode(.Enum)]
+	public class Enum : Node, IIdentifier
+	{
+		public Token Name { get; }
+		public List<EnumValue> Values { get; } ~ DeleteContainerAndItems!(_);
+		public Namespace Namespace { get; } = new .() ~ delete _;
+
+		public this(Token name, List<EnumValue> values, Namespace @namespace)
+		{
+			this.Name = name;
+			this.Values = values;
+			this.Namespace.List.AddRange(@namespace.List);
+		}
+
+		public class EnumValue
+		{
+			public Token Name { get; }
+			public Expr Value { get; } ~ delete _;
+
+			public this(Token name, Expr value)
+			{
+				this.Name = name;
+				this.Value = value;
+			}
 		}
 	}
 

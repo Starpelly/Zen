@@ -80,6 +80,9 @@ public class ASTPrinter
 		case .Struct:
 			VisitStructNode(outStr, node as Node.Struct);
 			break;
+		case .Enum:
+			VisitEnumNode(outStr, node as Node.Enum);
+			break;
 		case .Print:
 			// Deprecated
 			break;
@@ -176,6 +179,11 @@ public class ASTPrinter
 		builder.Append(scope $"(struct {node.Name.Lexeme}");
 
 		builder.Append(")");
+	}
+
+	public void VisitEnumNode(String outStr, Node.Enum node)
+	{
+
 	}
 
 	public void VisitExprNode(String outStr, Node.Expression node)

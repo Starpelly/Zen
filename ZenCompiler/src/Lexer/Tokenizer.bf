@@ -297,50 +297,6 @@ public class Tokenizer
 
 	}
 
-	/*
-	private void scanCEmbed()
-	{
-		// Opening '{', we'll assume there is one for now.
-		while (peek() != '{' && !isAtEnd())
-		{
-			if (peek() == '\n') increaseLine();
-			advance();
-		}
-		advance();
-
-		if (isAtEnd())
-		{
-			// Un-terminated cembed
-			// Lexer error here.
-			return;
-		}
-
-		m_start = m_current;
-
-		while (peek() != '}' && !isAtEnd())
-		{
-			if (peek() == '\n') increaseLine();
-			advance();
-		}
-
-		if (isAtEnd())
-		{
-			// Un-terminated cembed
-			// Lexer error here.
-			return;
-		}
-
-		// Closing '{'
-		advance();
-
-		// Trim the surrounding quotes.
-		let value = substring(m_start + 1, m_current - 1);
-		addToken(.CEmbed, "cembed", Variant.Create<StringView>(value));
-		addToken(.LeftBrace);
-		addToken(.RightBrace);
-	}
-	*/
-
 	private void scanIdentifier()
 	{
 		while (isAlphaNumeric(peek()))

@@ -11,28 +11,5 @@ public fun void Main()
 
 	// RunGame();
 
-	Rust(Pepsi::Vector2(0, 0));
-
-/*
-	Sandbox::Jai();
-	Pepsi::Jai();
-	DrPepper::Jai();
-*/
-
-	// let double pi = Pepsi::PI;
-}
-
-public fun void Rust(let Pepsi::Vector2 vector)
-{
-
-}
-
-public fun void AngelScript()
-{
-
-}
-
-public fun void Jai()
-{
-
+	let Pepsi::Color col = Pepsi::Color::Red;
 }

@@ -110,6 +110,7 @@ public class Parser
 	public static Dictionary<StringView, PrimitiveType> PrimitiveDataTypes { get; private set; } = new .()
 	{
 		("void", 			.Void),
+		("this", 			.Void),
 
 		("int", 			.Integer | .Float | .Double),
 		("int8", 			.Integer | .Float | .Double),
@@ -123,8 +124,9 @@ public class Parser
 		("uint32", 			.Integer | .Float | .Double),
 		("uint64", 			.Integer | .Float | .Double),
 
-		("float", 			.Float | .Integer),
-		("double", 			.Double),
+		("float", 			.Float | .Integer | .Double),
+		("float32", 		.Float | .Integer),
+		("float64", 		.Double),
 
 		("bool", 			.Boolean),
 
@@ -331,12 +333,12 @@ public class Parser
 			kind = .LocalFunction;
 		}
 
-		if (check(.Self))
+		if (check(.This))
 		{
-			let selfType = consume(.Self, scope $"Expected {kind} type.");
-			type = GetDataTypeFromTypeToken(selfType);
-			name = selfType;
-			kind = .Constructor;
+			let thisType = consume(.This, scope $"Expected {kind} type.");
+			type = GetDataTypeFromTypeToken(thisType);
+			name = thisType;
+			kind = .Initializer;
 		}
 		else
 		{
@@ -785,8 +787,11 @@ public class Parser
 			case .IntNumber:
 				typeName = "int";
 				break;
+			case .FloatNumber:
+				typeName = "float32";
+				break;
 			case .DoubleNumber:
-				typeName = "double";
+				typeName = "float64";
 				break;
 			case .True:
 				typeName = "bool";
@@ -806,6 +811,11 @@ public class Parser
 		if (match(.IntNumber, .DoubleNumber, .String))
 		{
 			returnLiteral!(previous(), previous().Literal);
+		}
+
+		if (match(.This))
+		{
+			return new Expr.This(previous());
 		}
 
 		if (match(.Identifier))

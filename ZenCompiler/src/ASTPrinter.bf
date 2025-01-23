@@ -42,6 +42,8 @@ public class ASTPrinter
 		case .Assign:
 			VisitAssignExpr(outStr, expr as Expr.Assign);
 			break;
+		case .This:
+			break;
 		}
 	}
 

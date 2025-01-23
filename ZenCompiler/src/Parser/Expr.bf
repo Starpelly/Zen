@@ -15,6 +15,7 @@ public enum ExprType
 	Unary,
 	Get,
 	Set,
+	This,
 	Grouping,
 	Assign
 }
@@ -87,6 +88,7 @@ public abstract class Expr
 		public Token Paren { get; }
 		public List<Expr> Arguments { get; } ~ DeleteContainerAndItems!(_);
 		public NamespaceList Namespaces { get; set; } ~ delete _;
+		public bool IsEmptyStructInitializer { get; set; }
 
 		public this(Expr.Variable callee, Token paren, List<Expr> arguments, NamespaceList namespaces)
 		{
@@ -177,6 +179,17 @@ public abstract class Expr
 			this.Object = object;
 			this.Name = name;
 			this.Value = value;
+		}
+	}
+
+	[RegisterExpr(.This)]
+	public class This : Expr
+	{
+		public Token Keyword { get; }
+
+		public this(Token keyword)
+		{
+			this.Keyword = keyword;
 		}
 	}
 

@@ -1,10 +1,38 @@
 // using System;
-using Pepsi;
-using DrPepper;
+// using Pepsi;
+// using DrPepper;
 
 namespace Sandbox;
 
-cembed("#include <stdio.h>");
+// cembed("#include <stdio.h>");
+
+public struct Hello
+{
+	public var int rezrov;
+	public var float32 frotz;
+	public var float64 frotz64;
+	public var uint8 myChar;
+	public var int8 dude;
+	public var float cowabunga;
+	public var int64 theBindingOfIsaac;
+
+	public fun this(let int rezrov)
+	{
+		this.rezrov = rezrov;
+	}
+}
+
+public struct Vector2
+{
+    public var float32 x;
+    public var float32 y;
+
+    public fun this(let float32 x, let float32 y)
+    {
+		this.x = x;
+		this.y = y;
+    }
+}
 
 public fun void Main()
 {
@@ -15,9 +43,14 @@ public fun void Main()
 
 	// let Pepsi::Color col = Pepsi::Color::Red;
 
-	let int fib = Fibonacci(30);
+	let Hello hi = Hello(30);
+	let Vector2 vector = Vector2(32, 64);
+
+	let int fib = Fibonacci(hi.rezrov);
 	cembed("""
 	printf("%i\n", fib);
+	printf("%f\n", vector.x);
+	printf("%f\n", vector.y);
 	""");
 }
 

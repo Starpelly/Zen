@@ -117,7 +117,15 @@ public class Codegen
 					let ns = WriteNamespace(.. scope .(), fun.Namespace);
 					funcName.Append(ns);
 				}
-				funcName.Append(fun.Name.Lexeme);
+
+				if (fun.Kind == .Initializer)
+				{
+					funcName.Append("init");
+				}
+				else
+				{
+					funcName.Append(fun.Name.Lexeme);
+				}
 			}
 
 			let line = scope String();
@@ -223,57 +231,39 @@ public class Codegen
 			}
 
 			let funcName = scope String();
-			if (fun.Namespace != null && fun.Kind != .Main)
-			{
-				let ns = WriteNamespace(.. scope .(), fun.Namespace);
-				funcName.Append(ns);
-			}
-			funcName.Append(fun.Name.Lexeme);
-
-			// Shitty code to check for local functions because C doesn't support local functions...
-			var localVars = scope List<Node.Variable>(); // This should probably be stored when compiling?
-			for (let bodyNode in fun.Body.Nodes)
-			{
-				if (var localFun = bodyNode as Node.Function)
-				{
-					if (localFun.Kind == .LocalFunction)
-					{
-						// let localFunName = scope $"{funcName}_{localFun.Name.Lexeme}";
-						/*
-						outLexeme.AppendLine("typedef struct {");
-						{
-							outLexeme.IncreaseTab();
-							{
-								for (let variable in localVars)
-								{
-									outLexeme.AppendLine(scope $"{variable.Type.Name} {variable.Name.Lexeme};");
-								}
-							}
-							outLexeme.DecreaseTab();
-						}
-						outLexeme.Append("}");
-						outLexeme.AppendLine(scope $" {localFunName}_Context;");
-						*/
-
-						stmtToString(ref outLexeme, bodyNode);
-						// m_outputH.AppendLine();
-					}
-				}
-				if (var @var = bodyNode as Node.Variable)
-				{
-					localVars.Add(@var);
-				}
-			}
 
 			if (fun.Kind == .Main)
 			{
-				funcName.Clear();
 				funcName.Append("main");
 			}
+			else
+			{
+				if (fun.Namespace != null && fun.Kind != .Main)
+				{
+					let ns = WriteNamespace(.. scope .(), fun.Namespace);
+					funcName.Append(ns);
+				}
+
+				if (fun.Kind == .Initializer)
+				{
+					funcName.Append("init");
+				}
+				else
+				{
+					funcName.Append(fun.Name.Lexeme);
+				}
+			}
+
 			outLexeme.AppendLine(scope $"{WriteType(.. scope .(), fun.Type)} {funcName}({parameters})");
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
 			{
+				if (fun.Kind == .Initializer)
+				{
+					outLexeme.AppendLine(scope $"{WriteType(.. scope .(), fun.Type)}");
+					outLexeme.Append(" this = { 0 };");
+				}
+
 				for (let bodyNode in fun.Body.Nodes)
 				{
 					if (let localFun = bodyNode as Node.Function)
@@ -282,6 +272,11 @@ public class Codegen
 							continue;
 					}
 					stmtToString(ref outLexeme, bodyNode);
+				}
+
+				if (fun.Kind == .Initializer)
+				{
+					outLexeme.AppendLine("return this;");
 				}
 			}
 			outLexeme.DecreaseTab();
@@ -386,21 +381,28 @@ public class Codegen
 
 		if (let call = expr as Expr.Call)
 		{
-			let callNamespace = WriteNamespace(.. scope .(), call.Namespaces);
-
-			let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
-
-			let arguments = scope String();
-
-			for (let argument in call.Arguments)
+			if (call.IsEmptyStructInitializer)
 			{
-				arguments.Append(expressionToString(.. scope .(), argument));
-
-				if (argument != call.Arguments.Back)
-					arguments.Append(", ");
+				outLexeme.Append("{ 0 }");
 			}
+			else
+			{
+				let callNamespace = WriteNamespace(.. scope .(), call.Namespaces);
 
-			outLexeme.Append(scope $"{name}({arguments})");
+				let name = scope $"{callNamespace}{expressionToString(.. scope .(), call.Callee)}";
+
+				let arguments = scope String();
+
+				for (let argument in call.Arguments)
+				{
+					arguments.Append(expressionToString(.. scope .(), argument));
+
+					if (argument != call.Arguments.Back)
+						arguments.Append(", ");
+				}
+
+				outLexeme.Append(scope $"{name}({arguments})");
+			}
 		}
 
 		if (let literal = expr as Expr.Literal)
@@ -456,6 +458,11 @@ public class Codegen
 			let object = expressionToString(.. scope .(), get.Object);
 			let name = get.Name.Lexeme;
 			outLexeme.Append(scope $"{object}.{name}");
+		}
+
+		if (let @this = expr as Expr.This)
+		{
+			outLexeme.Append("this");
 		}
 	}
 }

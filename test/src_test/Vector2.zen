@@ -7,11 +7,10 @@ public struct Vector2
     public var float x;
     public var float y;
 
-    public fun self(let float x, let float y)
+    public fun this(let float x, let float y)
     {
-        cembed("""
-        return CLITERAL(Pepsi_Vector2) { x, y };
-        """);
+        this.x = x;
+        this.y = y;
     }
 }
 

@@ -51,10 +51,14 @@ public class StandardLib
 
 		typedef unsigned int uint; // Platform-dependent unsigned int
 
-		""");
+		// Float primitives
+		typedef float float32;
+		typedef double float64;
 
-		// builder.AppendLine("#define string const char*"); // TEMP!!!, we want them to be actual strings in the future!
-		builder.AppendLine("#define string_view char*");
+		// Strings
+		typedef char* string_view;
+
+		""");
 
 		builder.Append("""
 

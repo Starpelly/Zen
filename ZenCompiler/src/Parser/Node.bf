@@ -155,7 +155,7 @@ public abstract class Node
 			Main,
 			Function,
 			LocalFunction,
-			Constructor,
+			Initializer,
 			Event
 		}
 

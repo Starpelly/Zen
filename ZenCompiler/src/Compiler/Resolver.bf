@@ -436,7 +436,7 @@ public class Resolver
 		{
 			if (let fun = node as Node.Function)
 			{
-				if (fun.Kind == .Constructor)
+				if (fun.Kind == .Initializer)
 				{
 					delete fun.Type;
 					fun.Type = new NonPrimitiveDataType(stmt.Name)..SetNamespace(stmt.Namespace.List);
@@ -821,7 +821,12 @@ public class Resolver
 		case .Ok(let zenStruct):
 			expr.Callee.Namespaces = new .();
 			expr.Callee.Namespaces.Add(zenStruct.Name);
-			expr.Callee.Name = Token(expr.Callee.Name.Type, expr.Callee.Name.Literal, "self", expr.Callee.Name.File, expr.Callee.Name.Line, expr.Callee.Name.Col, expr.Callee.Name.ColReal);
+			expr.Callee.Name = Token(expr.Callee.Name.Type, expr.Callee.Name.Literal, "init", expr.Callee.Name.File, expr.Callee.Name.Line, expr.Callee.Name.Col, expr.Callee.Name.ColReal);
+			if (zenStruct.Constructor == null)
+			{
+				expr.IsEmptyStructInitializer = true;
+				return;
+			}
 			actuallyCheckFunction(zenStruct.Constructor);
 			return;
 		case .Err(let errorCode):

@@ -79,6 +79,10 @@ public class Resolver
 		case .FUNCTION_CALL_TOO_FEW_ARGUMENTS:
 			simpleError!(scope $"Not enough arguments specified, expected {args[0]} more.");
 			break;
+
+		case .OPERATOR_INCOMPATIBLE_TYPES:
+			simpleError!(scope $"Operator '{token.Lexeme}' cannot be applied to operands of type '{args[0]}' and '{args[1]}'.");
+			break;
 		}
 	}
 
@@ -201,7 +205,7 @@ public class Resolver
 		return false;
 	}
 
-	private Result<T> findIdentifierStmt<T>(Token token) where T : Node
+	private Result<T> findIdentifierNode<T>(Token token) where T : Node
 	{
 		for (let i < m_scopes.Count)
 		{
@@ -256,19 +260,33 @@ public class Resolver
 		}
 		if (let variable = expr as Expr.Variable)
 		{
-			if (findIdentifierStmt<Node.Variable>(variable.Name) case .Ok(let ret))
+			if (findIdentifierNode<Node.Variable>(variable.Name) case .Ok(let ret))
 			{
 				return .Ok(ret.Type);
 			}
 		}
 		if (let call = expr as Expr.Call)
 		{
-			if (findIdentifierStmt<Node.Function>(call.Callee.Name) case .Ok(let ret))
+			if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(call, call.Callee.Name, .NOT_FOUND) case .Ok(let ret))
+			// if (findIdentifierNode<Node.Function>(call.Callee.Name) case .Ok(let ret))
 			{
-				return .Ok(ret.Type);
+				return .Ok(ret.Declaration.Type);
 			}
 		}
 		return .Err;
+	}
+
+	private bool CompareDataTypesExpr(Expr a, Expr b)
+	{
+		if (GetTypeFromExpr(a) case .Ok(let typeA))
+		{
+			if (GetTypeFromExpr(b) case .Ok(let typeB))
+			{
+				return (Parser.CompareDataTypes(typeA, typeB));
+			}
+		}
+
+		return false;
 	}
 
 	private void AddIdentifier(Identifier identifier)
@@ -517,11 +535,13 @@ public class Resolver
 
 		if (GetTypeFromExpr(stmt.Value) case .Ok(let returnType))
 		{
-			if (m_currentFunction.Type != returnType)
+			if (!Parser.CompareDataTypes(returnType, m_currentFunction.Type))
 			{
 				ThrowError(.IMPLICIT_CAST_INVALID, returnType.Token, returnType.Name, m_currentFunction.Type.Name);
 			}
 		}
+
+		resolveExpr(stmt.Value);
 	}
 
 	// ----------------------------------------------------------------
@@ -763,9 +783,9 @@ public class Resolver
 
 					if (let @var = argument as Expr.Variable)
 					{
-						if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let argDef))
+						if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let argDef))
 						{
-							if (parameter.Type.Name != argDef.Type.Name)
+							if (!Parser.CompareDataTypes(parameter.Type, argDef.Type))
 							{
 								ThrowError(.IMPLICIT_CAST_INVALID, @var.Name, argDef.Type.Name, parameter.Type.Name);
 								return;
@@ -779,31 +799,19 @@ public class Resolver
 					}
 					else if (let literal = argument as Expr.Literal)
 					{
-						// Compare the input parameter to the function argument.
-						if (let type = Parser.GetDataTypeFromTypeToken(parameter.Type.Token))
+						// Compare the input argument to the function parameter.
+						if (!Parser.CompareDataTypes(literal.Type, parameter.Type))
 						{
-							defer delete type;
-							if (let prim = type as PrimitiveDataType)
-							{
-								let otherType = Parser.GetDataTypeFromTypeToken(prim.Token);
-								defer delete otherType;
-								if (!Parser.CompareDataTypes(type, otherType))
-								{
-									ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
-								}
-							}
-							else
-							{
-								if (parameter.Type.Name != literal.Type.Name)
-								{
-									ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
-								}
-							}
+							ThrowError(.IMPLICIT_CAST_INVALID, literal.Token, literal.Type.Name, parameter.Type.Name);
 						}
 					}
 					else if (let call = argument as Expr.Call)
 					{
 						resolveExpr(call);
+					}
+					else if (let binary = argument as Expr.Binary)
+					{
+						resolveExpr(binary);
 					}
 					else
 					{
@@ -865,13 +873,51 @@ public class Resolver
 
 	private void visitBinaryExpr(Expr.Binary expr)
 	{
+		// @NOTE
+		// This should probably be a macro?
+		// I mean, it's pretty simple, so maybe not...
+		// - Starpelly, 1/23/2025
+		//
+		if (let @var = expr.Left as Expr.Variable)
+		{
+ 			if (findIdentifierNode<Node.Variable>(@var.Name) case .Err)
+			{
+				ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
+			}
+		}
+		if (let @var = expr.Right as Expr.Variable)
+		{
+			if (findIdentifierNode<Node.Variable>(@var.Name) case .Err)
+			{
+				ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
+			}
+		}
+
+		resolveExpr(expr.Left);
+		resolveExpr(expr.Right);
+
+		if (GetTypeFromExpr(expr.Left) case .Ok(let typeA))
+		{
+			if (GetTypeFromExpr(expr.Right) case .Ok(let typeB))
+			{
+				if (!Parser.CompareDataTypes(typeA, typeB))
+				{
+					ThrowError(.OPERATOR_INCOMPATIBLE_TYPES, expr.Operator, typeA.Name, typeB.Name);
+				}
+			}
+		}
+	}
+
+	int add(int a)
+	{
+		return a;
 	}
 
 	private void visitAssignExpr(Expr.Assign expr)
 	{
 		if (let @var = expr.Name as Expr.Variable)
 		{
-			if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let identifier))
+			if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let identifier))
 			{
 				if (!identifier.Mutable)
 				{
@@ -897,7 +943,7 @@ public class Resolver
 			// This is a lot of code, and it's making me uncomfortable...
 			if (let @var = get.Object as Expr.Variable)
 			{
-				if (findIdentifierStmt<Node.Variable>(@var.Name) case .Ok(let variable))
+				if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let variable))
 				{
 					if (!variable.Mutable)
 					{

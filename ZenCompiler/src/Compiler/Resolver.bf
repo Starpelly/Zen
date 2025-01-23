@@ -83,6 +83,10 @@ public class Resolver
 		case .OPERATOR_INCOMPATIBLE_TYPES:
 			simpleError!(scope $"Operator '{token.Lexeme}' cannot be applied to operands of type '{args[0]}' and '{args[1]}'.");
 			break;
+
+		case .CONST_MUST_BE_INITIALIZED:
+			simpleError!("Const locals must be initialized.");
+			break;
 		}
 	}
 
@@ -192,101 +196,19 @@ public class Resolver
 		}
 	}
 
-	private bool localIdentifierExists(Token token)
-	{
-		for (let i < m_scopes.Count)
-		{
-			let @scope = m_scopes[i];
-			if (@scope.ContainsKey(token.Lexeme))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private Result<T> findIdentifierNode<T>(Token token) where T : Node
-	{
-		for (let i < m_scopes.Count)
-		{
-			let @scope = m_scopes[i];
-			if (@scope.ContainsKey(token.Lexeme))
-			{
-				// resolve
-				return .Ok((T)@scope[token.Lexeme]);
-			}
-		}
-
-		return .Err;
-	}
-
-	private void addIdentifierToBackScope(Token token, Node stmt)
-	{
-		let @scope = m_scopes.Back;
-		if (@scope.ContainsKey(token.Lexeme))
-		{
-			ThrowError(.IDENTIFIER_ALREADY_DEFINED_SCOPE, token);
-		}
-		@scope[token.Lexeme] = stmt;
-	}
-
-	/// Compares two types to see if type 'b' can be implicitly casted to type 'a'.
-	/// This does NOT check the inverse!
-	private void compareAndCheckTypes(Expr expr, DataType a, DataType b)
-	{
-		if (b != a)
-		{
-			if (let literal = expr as Expr.Literal)
-			{
-				if (!Parser.CompareDataTypes(a, b))
-				{
-					ThrowError(.IMPLICIT_CAST_INVALID, a.Token, literal.Type.Name, a.Name);
-				}
-			}
-			/*
-			else if (let call = expr as Expr.Call)
-			{
+	// ----------------------------------------------------------------
+	// Helper Functions
+	// ----------------------------------------------------------------
 	
-			}
-			*/
-		}
+	private void BeginScope()
+	{
+		m_scopes.Add(new .());
 	}
 
-	private Result<DataType> GetTypeFromExpr(Expr expr)
+	private void EndScope()
 	{
-		if (let literal = expr as Expr.Literal)
-		{
-			return .Ok(literal.Type);
-		}
-		if (let variable = expr as Expr.Variable)
-		{
-			if (findIdentifierNode<Node.Variable>(variable.Name) case .Ok(let ret))
-			{
-				return .Ok(ret.Type);
-			}
-		}
-		if (let call = expr as Expr.Call)
-		{
-			if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(call, call.Callee.Name, .NOT_FOUND) case .Ok(let ret))
-			// if (findIdentifierNode<Node.Function>(call.Callee.Name) case .Ok(let ret))
-			{
-				return .Ok(ret.Declaration.Type);
-			}
-		}
-		return .Err;
-	}
-
-	private bool CompareDataTypesExpr(Expr a, Expr b)
-	{
-		if (GetTypeFromExpr(a) case .Ok(let typeA))
-		{
-			if (GetTypeFromExpr(b) case .Ok(let typeB))
-			{
-				return (Parser.CompareDataTypes(typeA, typeB));
-			}
-		}
-
-		return false;
+		let @scope = m_scopes.PopBack();
+		delete @scope;
 	}
 
 	private void AddIdentifier(Identifier identifier)
@@ -316,16 +238,88 @@ public class Resolver
 
 		namespaceToAdd.AddIdentifier(identifier);
 	}
-	
-	private void beginScope()
+
+	private void AddIdentifierToBackScope(Token token, Node stmt)
 	{
-		m_scopes.Add(new .());
+		let @scope = m_scopes.Back;
+		if (@scope.ContainsKey(token.Lexeme))
+		{
+			ThrowError(.IDENTIFIER_ALREADY_DEFINED_SCOPE, token);
+		}
+		@scope[token.Lexeme] = stmt;
 	}
 
-	private void endScope()
+	private Result<T> FindLocalIdentifierNode<T>(Token token) where T : Node
 	{
-		let @scope = m_scopes.PopBack();
-		delete @scope;
+		for (let i < m_scopes.Count)
+		{
+			let @scope = m_scopes[i];
+			if (@scope.ContainsKey(token.Lexeme))
+			{
+				return .Ok((T)@scope[token.Lexeme]);
+			}
+		}
+
+		return .Err;
+	}
+
+	private bool LocalIdentifierExists(Token token)
+	{
+		for (let i < m_scopes.Count)
+		{
+			let @scope = m_scopes[i];
+			if (@scope.ContainsKey(token.Lexeme))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/// Same thing as Parser.CompareDataTypes, but throws an error if false instead.
+	private void CompareAndCheckTypes(DataType a, DataType b)
+	{
+		if (!Parser.CompareDataTypes(a, b))
+		{
+			ThrowError(.IMPLICIT_CAST_INVALID, a.Token, a.Name, b.Name);
+		}
+	}
+
+	private Result<DataType> GetTypeFromExpr(Expr expr)
+	{
+		if (let literal = expr as Expr.Literal)
+		{
+			return .Ok(literal.Type);
+		}
+		if (let variable = expr as Expr.Variable)
+		{
+			if (FindLocalIdentifierNode<Node.Variable>(variable.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Type);
+			}
+		}
+		if (let call = expr as Expr.Call)
+		{
+			if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(call, call.Callee.Name, .NOT_FOUND) case .Ok(let ret))
+			// if (findIdentifierNode<Node.Function>(call.Callee.Name) case .Ok(let ret))
+			{
+				return .Ok(ret.Declaration.Type);
+			}
+		}
+		return .Err;
+	}
+
+	private bool CompareDataTypesExpr(Expr a, Expr b)
+	{
+		if (GetTypeFromExpr(a) case .Ok(let typeA))
+		{
+			if (GetTypeFromExpr(b) case .Ok(let typeB))
+			{
+				return (Parser.CompareDataTypes(typeA, typeB));
+			}
+		}
+
+		return false;
 	}
 
 	// ----------------------------------------------------------------
@@ -401,16 +395,16 @@ public class Resolver
 			visitVariableNode(param);
 		}
 
-		beginScope();
+		BeginScope();
 		{
 			for (let param in stmt.Parameters)
 			{
-				addIdentifierToBackScope(param.Name, param);
+				AddIdentifierToBackScope(param.Name, param);
 			}
 
 			resolveNodeBody(stmt.Body);
 		}
-		endScope();
+		EndScope();
 
 		m_currentFunction = enclosingFunction;
 	}
@@ -498,15 +492,24 @@ public class Resolver
 
 		if (m_scopes.Count == 0) return;
 
-		addIdentifierToBackScope(stmt.Name, stmt);
-
-		if (GetTypeFromExpr(stmt.Initializer) case .Ok(let typeB))
-		{
-			compareAndCheckTypes(stmt.Initializer, stmt.Type, typeB);
-		}
+		AddIdentifierToBackScope(stmt.Name, stmt);
 
 		if (stmt.HasInitializer)
+		{
+			if (GetTypeFromExpr(stmt.Initializer) case .Ok(let typeB))
+			{
+				CompareAndCheckTypes(typeB, stmt.Type);
+			}
+
 			resolveExpr(stmt.Initializer);
+		}
+		else
+		{
+			if (!stmt.Mutable)
+			{
+				ThrowError(.CONST_MUST_BE_INITIALIZED, stmt.Accessor);
+			}
+		}
 	}
 
 	// ----------------------------------------------------------------
@@ -559,11 +562,11 @@ public class Resolver
 
 	private void visitBlockNode(Node.Block stmt)
 	{
-		beginScope();
+		BeginScope();
 		{
 			Resolve(stmt.Nodes).IgnoreError();
 		}
-		endScope();
+		EndScope();
 	}
 
 	private void visitExpressionNode(Node.Expression stmt)
@@ -772,7 +775,7 @@ public class Resolver
 
 					if (let @var = argument as Expr.Variable)
 					{
-						if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let argDef))
+						if (FindLocalIdentifierNode<Node.Variable>(@var.Name) case .Ok(let argDef))
 						{
 							if (!Parser.CompareDataTypes(parameter.Type, argDef.Type))
 							{
@@ -851,7 +854,7 @@ public class Resolver
 
 	private void visitVariableExpr(Expr.Variable expr)
 	{
-		if (localIdentifierExists(expr.Name))
+		if (LocalIdentifierExists(expr.Name))
 		{
 			return;
 		}
@@ -884,7 +887,7 @@ public class Resolver
 	{
 		if (let @var = expr.Name as Expr.Variable)
 		{
-			if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let identifier))
+			if (FindLocalIdentifierNode<Node.Variable>(@var.Name) case .Ok(let identifier))
 			{
 				if (!identifier.Mutable)
 				{
@@ -894,7 +897,7 @@ public class Resolver
 
 				if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
 				{
-					compareAndCheckTypes(expr.Value, identifier.Type, typeB);
+					CompareAndCheckTypes(identifier.Type, typeB);
 				}
 			}
 			else
@@ -910,7 +913,7 @@ public class Resolver
 			// This is a lot of code, and it's making me uncomfortable...
 			if (let @var = get.Object as Expr.Variable)
 			{
-				if (findIdentifierNode<Node.Variable>(@var.Name) case .Ok(let variable))
+				if (FindLocalIdentifierNode<Node.Variable>(@var.Name) case .Ok(let variable))
 				{
 					if (!variable.Mutable)
 					{
@@ -931,7 +934,7 @@ public class Resolver
 									let typeA = structVar.Type;
 									if (GetTypeFromExpr(expr.Value) case .Ok(let typeB))
 									{
-										compareAndCheckTypes(expr.Value, typeA, typeB);
+										CompareAndCheckTypes(typeA, typeB);
 									}
 								}
 							}

@@ -62,6 +62,7 @@ public abstract class Node
 	[RegisterNode(.Variable)]
 	public class Variable : Node
 	{
+		public Token Accessor { get; }
 		public Token Name { get; }
 		public DataType Type { get; } ~ delete _;
 		public Expr Initializer { get; } ~ delete _;
@@ -69,8 +70,9 @@ public abstract class Node
 
 		public bool HasInitializer => Initializer != null;
 
-		public this(Token name, DataType type, Expr initializer, bool mutable)
+		public this(Token accessor, Token name, DataType type, Expr initializer, bool mutable)
 		{
+			this.Accessor = accessor;
 			this.Name = name;
 			this.Type = type;
 			this.Initializer = initializer;

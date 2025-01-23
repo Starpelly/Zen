@@ -200,9 +200,9 @@ public class Parser
 		if (match(.Public) || match(.Private))
 			return null;
 		if (match(.Var))
-			return VariableDeclaration(true);
+			return VariableDeclaration(previous(), true);
 		if (match(.Let))
-			return VariableDeclaration(false);
+			return VariableDeclaration(previous(), false);
 		if (match(.Const))
 			return ConstDeclaration();
 
@@ -373,7 +373,7 @@ public class Parser
 
 				// let paramType = GetDataTypeFromTypeToken(pType);
 
-				parameters.Add(new .(pName, pType, null, (accessor.Type == .Var)));
+				parameters.Add(new .(accessor, pName, pType, null, (accessor.Type == .Var)));
 			} while(match(.Comma));
 		}
 
@@ -562,7 +562,7 @@ public class Parser
 		return new Node.CEmbed(code);
 	}
 
-	private Node.Variable VariableDeclaration(bool mutable)
+	private Node.Variable VariableDeclaration(Token accessor, bool mutable)
 	{
 		let type = consumeDataType();
 		let name = consume(.Identifier, "Expected variable name.");
@@ -581,7 +581,7 @@ public class Parser
 
 		// let varType = GetDataTypeFromTypeToken(type);
 		// let inferredType = Token(.Integer, )
-		return new Node.Variable(name, type, initializer, mutable);
+		return new Node.Variable(accessor, name, type, initializer, mutable);
 	}
 
 	private Node.Const ConstDeclaration()

@@ -434,18 +434,6 @@ public class Resolver
 		let @struct = new ZenStruct(stmt);
 		AddIdentifier(@struct);
 
-		/*
-		let tempList = scope NamespaceList();
-		tempList.AddRange(m_currentNamespace.List);
-		tempList.Add(@struct.Name);
-
-		let ns = new ZenNamespace(tempList);
-		m_environment.Define(tempList.NamespaceListToString(.. scope .()), Variant.Create(ns));
-
-		m_currentNamespace.List.Add(@struct.Name);
-		defer m_currentNamespace.List.PopBack();
-		*/
-
 		m_currentStruct = @struct;
 		defer { m_currentStruct = null; }
 
@@ -593,7 +581,7 @@ public class Resolver
 	// Expressions
 	// ----------------------------------------------------------------
 
-	public enum IdentifierError
+	public enum IdentifierError : uint8
 	{
 		ALL = 0,
 		NONE = 1,
@@ -603,7 +591,7 @@ public class Resolver
 
 	private Result<TIdentifier, IdentifierError> ZenIdentifierExistCheckNamespace<TIdentifier>(Token name, NamespaceList namespaces, IdentifierError reportErrorFlags) where TIdentifier : Identifier
 	{
-		let reportAllErrors = reportErrorFlags.HasFlag(.ALL);
+		let reportAllErrors = reportErrorFlags.HasFlag(.ALL) || reportErrorFlags == .ALL;
 
 		mixin notAvailableError()
 		{
@@ -639,7 +627,7 @@ public class Resolver
 	private Result<TIdentifier, IdentifierError> ZenIdentifierExistCheckUsings<TIdentifier>(Token name, NamespaceList namespaces, NamespaceList newNamespaces, IdentifierError reportErrorFlags) where TIdentifier : Identifier
 	{
 		newNamespaces.AddRange(namespaces);
-		let reportAllErrors = reportErrorFlags.HasFlag(.ALL);
+		let reportAllErrors = reportErrorFlags.HasFlag(.ALL) || reportErrorFlags == .ALL;
 
 		void addNamespaceToExpr(Token namespaceToken)
 		{
@@ -734,6 +722,7 @@ public class Resolver
 
 			if (foundIdentifierInLocal)
 			{
+				newNamespaces.AddRange(m_currentNamespace.List);
 				return .Ok(foundIdentifierLocal);
 			}
 			else if (foundIdentifierInUsings)
@@ -841,11 +830,15 @@ public class Resolver
 		}
 
 		// Check if the call is a function.
-		if (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(expr, expr.Callee.Name, .ALL) case .Ok(let zenFunc))
+		switch (ZenIdentifierExistCheckExpr<ZenFunction, Expr.Call>(expr, expr.Callee.Name, .ALL))
 		{
+		case .Ok(let zenFunc):
 			actuallyCheckFunction(zenFunc);
-
-			return;
+			break;
+		case .Err(.NOT_FOUND):
+			ThrowError(.IDENTIFIER_NOT_FOUND, expr.Callee.Name);
+			break;
+		default:
 		}
 
 		// @NOTE
@@ -854,7 +847,6 @@ public class Resolver
 		// - Starpelly, 1/21/25
 		//
 
-		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Callee.Name);
 	}
 
 	private void visitVariableExpr(Expr.Variable expr)
@@ -868,31 +860,11 @@ public class Resolver
 			return;
 		}
 
-		// ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
+		ThrowError(.IDENTIFIER_NOT_FOUND, expr.Name);
 	}
 
 	private void visitBinaryExpr(Expr.Binary expr)
 	{
-		// @NOTE
-		// This should probably be a macro?
-		// I mean, it's pretty simple, so maybe not...
-		// - Starpelly, 1/23/2025
-		//
-		if (let @var = expr.Left as Expr.Variable)
-		{
- 			if (findIdentifierNode<Node.Variable>(@var.Name) case .Err)
-			{
-				ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
-			}
-		}
-		if (let @var = expr.Right as Expr.Variable)
-		{
-			if (findIdentifierNode<Node.Variable>(@var.Name) case .Err)
-			{
-				ThrowError(.IDENTIFIER_NOT_FOUND, @var.Name);
-			}
-		}
-
 		resolveExpr(expr.Left);
 		resolveExpr(expr.Right);
 
@@ -906,11 +878,6 @@ public class Resolver
 				}
 			}
 		}
-	}
-
-	int add(int a)
-	{
-		return a;
 	}
 
 	private void visitAssignExpr(Expr.Assign expr)

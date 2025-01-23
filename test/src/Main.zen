@@ -13,9 +13,9 @@ public fun void Main()
 
 	// RunGame();
 
-	let Pepsi::Color col = Pepsi::Color::Red;
+	// let Pepsi::Color col = Pepsi::Color::Red;
 
-	let int fib = Sandbox::Fibonacci(30);
+	let int fib = Fibonacci(30);
 	cembed("""
 	printf("%i\n", fib);
 	""");
@@ -29,6 +29,6 @@ public fun int Fibonacci(let int num)
 	}
 	else
 	{
-		return Sandbox::Fibonacci(num - 1) + Sandbox::Fibonacci(num - 2);
+		return Fibonacci(num - 1) + Fibonacci(num - 2);
 	}
 }

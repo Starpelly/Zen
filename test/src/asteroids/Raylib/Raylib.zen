@@ -4,6 +4,34 @@ cembed("""
 #include <C:/Users/Braedon/Downloads/raylib-master/raylib-master/src/raylib.h>
 """);
 
+public struct Vector2
+{
+    public var float32 x;
+    public var float32 y;
+
+    public fun this(let float32 x, let float32 y)
+    {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+public struct Color
+{
+    public var uint8 r;
+    public var uint8 g;
+    public var uint8 b;
+    public var uint8 a;
+    
+    public fun this(let uint8 r, let uint8 g, let uint8 b, let uint8 a)
+    {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+    }
+}
+
 public fun void InitWindow(let int width, let int height, let string_view title)
 {
     // cembed("InitWindow(@param(width), @param(height), @param(title));");

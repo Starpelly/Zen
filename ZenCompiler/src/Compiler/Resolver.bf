@@ -149,6 +149,9 @@ public class Resolver
 		case .Function:
 			visitFunctionNodeBody((Node.Function)node);
 			break;
+		case .Struct:
+			visitStructNodeBody((Node.Struct)node);
+			break;
 		case .Block:
 			visitBlockNode((Node.Block)node);
 			break;
@@ -423,27 +426,38 @@ public class Resolver
 	// Struct
 	// ----------------------------------------------------------------
 
-	private void visitStructNodeDefinition(Node.Struct stmt)
+	private void visitStructNodeDefinition(Node.Struct node)
 	{
-		let @struct = new ZenStruct(stmt);
+		let @struct = new ZenStruct(node);
 		AddIdentifier(@struct);
 
 		m_currentStruct = @struct;
 		defer { m_currentStruct = null; }
 
 		// Add construtors to identifiers if any
-		for (let node in ref stmt.Body.Nodes)
+		for (let bodyNode in ref node.Body.Nodes)
 		{
-			if (let fun = node as Node.Function)
+			if (let fun = bodyNode as Node.Function)
 			{
 				if (fun.Kind == .Initializer)
 				{
 					delete fun.Type;
-					fun.Type = new NonPrimitiveDataType(stmt.Name)..SetNamespace(stmt.Namespace.List);
+					fun.Type = new NonPrimitiveDataType(node.Name)..SetNamespace(node.Namespace.List);
 
 					let zenFunc = visitFunctionNodeDefinition(fun);
 					@struct.Constructor = zenFunc;
 				}
+			}
+		}
+	}
+
+	private void visitStructNodeBody(Node.Struct node)
+	{
+		for (let bodyNode in ref node.Body.Nodes)
+		{
+			if (let fun = bodyNode as Node.Function)
+			{
+				visitFunctionNodeBody(fun);
 			}
 		}
 	}
@@ -658,30 +672,64 @@ public class Resolver
 		var foundIdentifierInLocal = false;
 		var foundIdentifierLocal = default(TIdentifier);
 		var foundIdentifierInUsings = false;
-		var foundIdentifierUsings = scope List<(Node.Using, TIdentifier)>();
+		var foundIdentifierUsings = scope List<(Token, TIdentifier)>();
 
+		var foundIdentifierInExplicit = false;
+		var foundIdentifierExplicitToken = default(Token);
+		var foundIdentifierExplicit = default(TIdentifier); // Useful so we don't compare with itself when searching for ambig types.
+
+		/*
 		if (newNamespaces.Count > 0)
 		{
-			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, newNamespaces, reportErrorFlags) case .Ok(let identifier))
+			let checkNamespace = scope NamespaceList();
+			// checkNamespace.AddRange(m_currentNamespace.List);
+			checkNamespace.AddRange(newNamespaces);
+			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, checkNamespace, reportErrorFlags) case .Ok(let identifier))
 			{
 				return .Ok(identifier);
 			}
+
 			return .Err(.NOT_FOUND);
 		}
 		else
+		*/
 		{
 			// Fist, check the current namespace for the identifier.
-			if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, m_currentNamespace.List, .NONE) case .Ok(let identifier))
 			{
-				// Great! We found this identifier in out current namespace!
+				let _ = scope NamespaceList(m_currentNamespace.List.Count);
+				_.AddRange(m_currentNamespace.List);
+				_.AddRange(newNamespaces);
 
-				foundIdentifierInLocal = true;
-				foundIdentifierLocal = identifier;
+				if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, _, .NONE) case .Ok(let identifier))
+				{
+					// Great! We found this identifier in out current namespace!
+
+					foundIdentifierInLocal = true;
+					foundIdentifierLocal = identifier;
+
+					newNamespaces.Clear();
+					newNamespaces.AddRange(_);
+				}
 			}
 
-			// Next, check for the identifier in the current file's usings.
+			// Next, check from the first namespace provided (if any).
+			{
+				if (ZenIdentifierExistCheckNamespace<TIdentifier>(name, newNamespaces, .NONE) case .Ok(let identifier))
+				{
+					// Great! We found this identifier in out current namespace!
+
+					foundIdentifierInExplicit = true;
+					foundIdentifierExplicit = identifier;
+
+					foundIdentifierExplicitToken = newNamespaces[0];
+				}
+			}
+
+			// Finally, check for the identifier in the current file's usings.
 			for (let @using in m_currentUsings)
 			{
+				if (@using.Name != foundIdentifierExplicitToken) continue;
+
 				// This is utterly fucking retarded.
 				let _ = scope NamespaceList(1);
 				_.Add(@using.Name);
@@ -703,14 +751,17 @@ public class Resolver
 							let one = scope NamespaceList(1);
 							let two = scope NamespaceList(1);
 
-							one.Add(foundIdentifierUsings[0].0.Name);
+							one.Add(foundIdentifierUsings[0].0);
 							two.Add(@using.Name);
 
 							ambigRefError!(one, name, two, name);
 						}
 
 						foundIdentifierInUsings = true;
-						foundIdentifierUsings.Add((@using, identifier));
+						foundIdentifierUsings.Add((@using.Name, identifier));
+
+						newNamespaces.Clear();
+						newNamespaces.AddRange(_);
 					}
 				}
 			}
@@ -719,13 +770,17 @@ public class Resolver
 			if (foundIdentifierInLocal == true && foundIdentifierInUsings == true)
 			{
 				let two = scope NamespaceList(1);
-				two.Add(foundIdentifierUsings[0].0.Name);
+				two.Add(foundIdentifierUsings[0].0);
 				ambigRefError!(m_currentNamespace.List, foundIdentifierLocal.Name, two, foundIdentifierLocal.Name);
 			}
 
-			if (foundIdentifierInLocal)
+			if (foundIdentifierInExplicit)
 			{
-				newNamespaces.AddRange(m_currentNamespace.List);
+				return .Ok(foundIdentifierExplicit);
+			}
+			else if (foundIdentifierInLocal)
+			{
+				// newNamespaces.AddRange(m_currentNamespace.List);
 				return .Ok(foundIdentifierLocal);
 			}
 			else if (foundIdentifierInUsings)

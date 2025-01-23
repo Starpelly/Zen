@@ -1,0 +1,49 @@
+using Raylib;
+
+namespace Asteroids::Game;
+
+public const int32 SCREEN_WIDTH = 800;
+public const int32 SCREEN_HEIGHT = 800;
+
+public fun void Run()
+{
+    let int screenWidth = 800;
+    let int screenHeight = 600;
+
+    var Player player = Player();
+
+    Raylib::InitWindow(screenWidth, screenHeight, "Asteroids");
+    // Raylib::SetTargetFPS(60);
+
+    while (!Raylib::WindowShouldClose())
+	{
+		Raylib::BeginDrawing();
+        {
+            Render();
+            
+            Raylib::DrawRectangleV(Raylib::Vector2(player.position.x, player.position.y), player.size, Raylib::Color(0, 0, 0, 255));
+
+            player.position = Raylib::GetMousePosition();
+
+            if (Raylib::IsMouseButtonDown(0)) {
+                player.position.y = 0;
+            } else {
+                player.position.y = 320;
+            }
+        }
+        Raylib::EndDrawing();
+	}
+
+    Raylib::CloseWindow();
+}
+
+public fun void Update()
+{
+
+}
+
+public fun void Render()
+{
+    Raylib::ClearBackground(Raylib::Color(245, 245, 245, 255));
+    Raylib::DrawText("Hello from Zen!", 190, 200, 20, Raylib::Color(140, 140, 140, 255));
+}

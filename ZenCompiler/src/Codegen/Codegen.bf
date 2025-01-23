@@ -198,23 +198,39 @@ public class Codegen
 			m_outputH.AppendLine("}");
 			m_outputH.Append(scope $" {outName};");
 		}
+
+		if (let cembed = node as Node.CEmbed)
+		{
+			if (!cembed.Header) return;
+
+			let bodyText = cembed.Code;
+			for (let line in bodyText.Split('\n'))
+			{
+				var outLine = line;
+				outLine.TrimEnd('\n');
+				// outLine.TrimStart();
+
+				if (outLine.IsWhiteSpace || outLine.IsNull || outLine.IsEmpty) continue;
+			   	outLexeme.AppendLine(outLine);
+			}
+		}
 	}
 
-	private void stmtToString(ref CodeBuilder outLexeme, Node stmt)
+	private void stmtToString(ref CodeBuilder outLexeme, Node node)
 	{
 		// outLexeme.AppendTabs();
 
-		if (let @struct = stmt as Node.Struct)
+		if (let @struct = node as Node.Struct)
 		{
-			for (let node in @struct.Body.Nodes)
+			for (let bodyNode in @struct.Body.Nodes)
 			{
-				if (let fun = node as Node.Function)
+				if (let fun = bodyNode as Node.Function)
 				{
 					stmtToString(ref outLexeme, fun);
 				}
 			}
 		}
-		if (let fun = stmt as Node.Function)
+		if (let fun = node as Node.Function)
 		{
 			let parameters = scope String();
 
@@ -283,7 +299,7 @@ public class Codegen
 			outLexeme.AppendLine("}");
 		}
 
-		if (let block = stmt as Node.Block)
+		if (let block = node as Node.Block)
 		{
 			outLexeme.AppendLine("{");
 			outLexeme.IncreaseTab();
@@ -295,13 +311,13 @@ public class Codegen
 			outLexeme.AppendLine("}");
 		}
 
-		if (let expr = stmt as Node.Expression)
+		if (let expr = node as Node.Expression)
 		{
 			let line = expressionToString(.. scope .(), expr.InnerExpression);
 			outLexeme.AppendLine(scope $"{line};");
 		}
 
-		if (let @var = stmt as Node.Variable)
+		if (let @var = node as Node.Variable)
 		{
 			let outStr = scope String();
 			let initializerStr = expressionToString(.. scope .(), @var.Initializer);
@@ -326,13 +342,13 @@ public class Codegen
 			outLexeme.AppendLine(outStr);
 		}
 
-		if (let ret = stmt as Node.Return)
+		if (let ret = node as Node.Return)
 		{
 			let lexeme = expressionToString(..scope .(), ret.Value);
 			outLexeme.AppendLine(scope $"return {lexeme};");
 		}
 
-		if (let @if = stmt as Node.If)
+		if (let @if = node as Node.If)
 		{
 			let args = expressionToString(.. scope .(), @if.Condition);
 			outLexeme.AppendLine(scope $"if ({args})");
@@ -347,7 +363,7 @@ public class Codegen
 			}
 		}
 
-		if (let @while = stmt as Node.While)
+		if (let @while = node as Node.While)
 		{
 			let args = expressionToString(.. scope .(), @while.Condition);
 			outLexeme.AppendLine(scope $"while ({args})");
@@ -355,8 +371,10 @@ public class Codegen
 			stmtToString(ref outLexeme, @while.Body);
 		}
 
-		if (let cembed = stmt as Node.CEmbed)
+		if (let cembed = node as Node.CEmbed)
 		{
+			if (cembed.Header) return;
+
 			let bodyText = cembed.Code;
 			for (let line in bodyText.Split('\n'))
 			{

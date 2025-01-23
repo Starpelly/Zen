@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 
+using Beefy.utils;
+
 namespace Zen;
 
 // IDE - Zen garden
@@ -15,9 +17,9 @@ class Program
 
 	private class CLIArguments
 	{
-		public String InputSrcDir = null ~ delete _;
-		public String OutputSrcDir = null ~ delete _;
-		public String OutputBuildDir = null ~ delete _;
+		public String InputSrcDir = new .() ~ delete _;
+		public String OutputSrcDir = new .() ~ delete _;
+		public String OutputBuildDir = new .() ~ delete _;
 		public bool BuildWithTCC = false;
 		public bool RunAfterBuild = false;
 		public bool PrintAST = false;
@@ -31,6 +33,36 @@ class Program
 		}
 	}
 
+	private class Project
+	{
+		public String SourceDir = new .() ~ delete _;
+		public String ProjectName = new .() ~ delete _;
+		public String StartupFunc = new .() ~ delete _;
+
+		public void Load(StringView zenProjToml)
+		{
+			let sd = scope StructuredData();
+			if (sd.LoadFromString(zenProjToml) case .Ok)
+			{
+				using (sd.Open("Project"))
+				{
+					let sourceDir = scope String();
+					sd.GetString("Source", sourceDir);
+
+					let projName = scope String();
+					sd.GetString("Name", projName);
+
+					let startupFunc = scope String();
+					sd.GetString("StartupFunction", startupFunc);
+
+					this.SourceDir.Set(sourceDir);
+					this.ProjectName.Set(projName);
+					this.StartupFunc.Set(startupFunc);
+				}
+			}
+		}
+	}
+
 	public static int Main(String[] args)
 	{
 		var cliArgs = scope CLIArguments();
@@ -38,11 +70,22 @@ class Program
 		{
 			if (arg.StartsWith("-workspace"))
 			{
-				let argSplit = scope List<StringView>();
-				ToStringViewList!(arg.Split('='), argSplit);
-				cliArgs.InputSrcDir = new $"{argSplit[1]}/src";
-				cliArgs.OutputSrcDir = new $"{argSplit[1]}/build/codegen";
-				cliArgs.OutputBuildDir = new $"{argSplit[1]}/build/bin";
+				let projectFile = @"D:\Zen\test\ZenProj.toml";
+				let projectTOML = scope String();
+
+				if (File.ReadAllText(projectFile, projectTOML) case .Ok)
+				{
+					let project = scope Project();
+					project.Load(projectTOML);
+
+					let argSplit = scope List<StringView>();
+					ToStringViewList!(arg.Split('='), argSplit);
+
+					let projectDir = argSplit[1];
+					cliArgs.InputSrcDir.Set(scope $"{projectDir}/{project.SourceDir}");
+					cliArgs.OutputSrcDir.Set(scope $"{projectDir}/build/codegen");
+					cliArgs.OutputBuildDir.Set(scope $"{projectDir}/build/bin");
+				}
 				continue;
 			}
 			switch (arg)

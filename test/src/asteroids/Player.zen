@@ -1,0 +1,17 @@
+namespace Asteroids::Game;
+
+hembed("""
+#include "Raylib/Raylib.h" 
+""");
+// ^^ This is a hack, I don't know how to resolve struct references with header files right now...
+
+public struct Player
+{
+    public var Raylib::Vector2 position;
+    public var Raylib::Vector2 size;
+
+    public fun this()
+    {
+        this.size = Raylib::Vector2(32, 32);
+    }
+}

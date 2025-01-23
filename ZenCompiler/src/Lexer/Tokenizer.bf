@@ -30,6 +30,7 @@ public class Tokenizer
 		("namespace", .Namespace),
 		("using", .Using),
 		("cembed", .CEmbed),
+		("hembed", .HEmbed),
 		("public", .Public),
 		("private", .Private),
 		("const", .Const),

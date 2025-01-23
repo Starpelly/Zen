@@ -139,10 +139,12 @@ public abstract class Node
 	public class CEmbed : Node
 	{
 		public String Code { get; } ~ delete _;
+		public bool Header { get; }
 
-		public this(StringView code)
+		public this(StringView code, bool header)
 		{
 			this.Code = new .(code);
+			this.Header = header;
 		}
 	}
 

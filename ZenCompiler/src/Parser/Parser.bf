@@ -198,7 +198,9 @@ public class Parser
 		if (match(.While))
 			return WhileNode();
 		if (match(.CEmbed))
-			return CEmbedNode();
+			return CEmbedNode(false);
+		if (match(.HEmbed))
+			return CEmbedNode(true);
 		if (match(.Public) || match(.Private))
 			return null;
 		if (match(.Var))
@@ -246,16 +248,31 @@ public class Parser
 	/// @Note - this should also work for non primitive data types, but it doesn't right now.
 	public static bool CompareDataTypes(DataType a, DataType b)
 	{
-		if (!(a is PrimitiveDataType && b is PrimitiveDataType))return false;
+		if (!(a is PrimitiveDataType && b is PrimitiveDataType)
+			&& !(a is NonPrimitiveDataType && b is NonPrimitiveDataType))
+			return false;
 
-		let aType = a as PrimitiveDataType;
-		let bType = b as PrimitiveDataType;
-
-		let aFlags = PrimitiveDataTypes[aType.Name];
-		let bFlags = PrimitiveDataTypes[bType.Name];
-		if (bFlags.HasFlag(aFlags))
+		if (a is PrimitiveDataType)
 		{
-			return true;
+			let aType = a as PrimitiveDataType;
+			let bType = b as PrimitiveDataType;
+
+			let aFlags = PrimitiveDataTypes[aType.Name];
+			let bFlags = PrimitiveDataTypes[bType.Name];
+			if (bFlags.HasFlag(aFlags))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			let aType = a as NonPrimitiveDataType;
+			let bType = b as NonPrimitiveDataType;
+
+			if (aType.Name == bType.Name)
+			{
+				return true;
+			}
 		}
 
 		return false;
@@ -551,7 +568,7 @@ public class Parser
 		return new Node.While(condition, body);
 	}
 
-	private Node.CEmbed CEmbedNode()
+	private Node.CEmbed CEmbedNode(bool header)
 	{
 		consume(.LeftParentheses, scope $"Expected '(' before 'cembed' body.");
 
@@ -559,9 +576,9 @@ public class Parser
 		advance();
 
 		consume(.RightParenthesis, "Expected ')' after 'cembed' body.");
-		consume(.Semicolon, "Expected ';' after cembed declaration.");
+		consume(.Semicolon, "Expected ';' after 'cembed' declaration.");
 
-		return new Node.CEmbed(code);
+		return new Node.CEmbed(code, header);
 	}
 
 	private Node.Variable VariableDeclaration(Token accessor, bool mutable)

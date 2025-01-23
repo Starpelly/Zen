@@ -1,0 +1,6 @@
+namespace Asteroids;
+
+public fun void Main()
+{
+    Game::Run();
+}

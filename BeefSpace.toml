@@ -1,5 +1,5 @@
 FileVersion = 1
-Projects = {Zen = {Path = "ZenCompiler"}}
+Projects = {Zen = {Path = "ZenCompiler"}, ZenUtils = {Path = "ZenUtils"}}
 
 [Workspace]
 StartupProject = "Zen"

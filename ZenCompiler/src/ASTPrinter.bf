@@ -43,6 +43,7 @@ public class ASTPrinter
 			VisitAssignExpr(outStr, expr as Expr.Assign);
 			break;
 		case .This:
+			VisitThisExpr(outStr, expr as Expr.This);
 			break;
 		}
 	}
@@ -153,6 +154,11 @@ public class ASTPrinter
 
 	public void VisitVariableExpr(String outStr, Expr.Variable expr)
 	{
+	}
+
+	public void VisitThisExpr(String outStr, Expr.This expr)
+	{
+		outStr.Append(scope $"(this {expr.Keyword.Lexeme})");
 	}
 
 	public void VisitUsingNode(String outStr, Node.Using node)

@@ -1,0 +1,12 @@
+namespace Pelly;
+
+public struct Player
+{
+    public var Raylib::Vector2 position;
+    public var Raylib::Vector2 size;
+
+    public fun this()
+    {
+        this.size = Raylib::Vector2(32, 32);
+    }
+}

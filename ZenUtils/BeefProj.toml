@@ -1,0 +1,6 @@
+FileVersion = 1
+
+[Project]
+Name = "ZenUtils"
+TargetType = "BeefLib"
+StartupObject = "ZenUtils.Program"

@@ -9,7 +9,7 @@ public struct Vector2
     public var float32 x;
     public var float32 y;
 
-    public fun this(let float32 x, let float32 y)
+    public function this(let float32 x, let float32 y)
     {
         this.x = x;
         this.y = y;
@@ -23,7 +23,7 @@ public struct Color
     public var uint8 b;
     public var uint8 a;
     
-    public fun this(let uint8 r, let uint8 g, let uint8 b, let uint8 a)
+    public function this(let uint8 r, let uint8 g, let uint8 b, let uint8 a)
     {
         this.r = r;
         this.g = g;
@@ -32,48 +32,48 @@ public struct Color
     }
 }
 
-public fun void InitWindow(let int width, let int height, let string_view title)
+public function void InitWindow(let int width, let int height, let string_view title)
 {
     // cembed("InitWindow(@param(width), @param(height), @param(title));");
     cembed("InitWindow(width, height, title);");
 }
 
-public fun void SetTargetFPS(let int fps)
+public function void SetTargetFPS(let int fps)
 {
     cembed("SetTargetFPS(fps);");
 }
 
-public fun bool WindowShouldClose()
+public function bool WindowShouldClose()
 {
     cembed("return WindowShouldClose();");
 }
 
-public fun void CloseWindow()
+public function void CloseWindow()
 {
     cembed("CloseWindow();");
 }
 
-public fun void BeginDrawing()
+public function void BeginDrawing()
 {
     cembed("BeginDrawing();");
 }
 
-public fun void EndDrawing()
+public function void EndDrawing()
 {
     cembed("EndDrawing();");  
 }
 
-public fun void ClearBackground(let Color color)
+public function void ClearBackground(let Color color)
 {
     cembed("ClearBackground(CLITERAL(Color){ color.r, color.g, color.b, color.a } );");
 }
 
-public fun void DrawText(let string_view text, let int x, let int y, let int font_size, let Color color)
+public function void DrawText(let string_view text, let int x, let int y, let int font_size, let Color color)
 {
     cembed("DrawText(text, x, y, font_size, CLITERAL(Color){ color.r, color.g, color.b, color.a });");
 }
 
-public fun void DrawRectangleV(let Vector2 position, let Vector2 size, let Color color)
+public function void DrawRectangleV(let Vector2 position, let Vector2 size, let Color color)
 {
     cembed("""
     const Vector2 pos = CLITERAL(Vector2) { position.x, position.y };
@@ -83,14 +83,14 @@ public fun void DrawRectangleV(let Vector2 position, let Vector2 size, let Color
     """);
 }
 
-public fun bool IsMouseButtonDown(let int button)
+public function bool IsMouseButtonDown(let int button)
 {
     cembed("""
     return IsMouseButtonDown(button);
     """);
 }
 
-public fun Raylib::Vector2 GetMousePosition()
+public function Raylib::Vector2 GetMousePosition()
 {
     // Not guarenteed to work on all compilers.
     // So this shouldn't be standardized.
@@ -100,7 +100,7 @@ public fun Raylib::Vector2 GetMousePosition()
     """);
 }
 
-public fun float GetFrameTime()
+public function float GetFrameTime()
 {
     cembed("return GetFrameTime();");
 }

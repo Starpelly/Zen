@@ -1,6 +1,5 @@
 namespace Raylib;
 
-/*
 public enum KeyCode
 {
     /// Key: NULL, used for no key pressed
@@ -224,6 +223,5 @@ public enum KeyCode
     /// Key: Android Volume Down Button
     VolumeDown = 25,
 
-    KeyLast = KeypadMenu
+    // KeyLast = KeypadMenu
 }
-*/

@@ -38,7 +38,10 @@ public class StandardLib
 		builder.Append("""
 
 
-		// Int primitives
+		// ------------------------------------
+		// INT PRIMITIVES
+		// ------------------------------------
+
 		typedef int32_t  int32;   // Standard 32-bit signed integer
 		typedef int8_t   int8;    // Standard 8-bit signed integer
 		typedef int16_t  int16;   // Standard 16-bit signed integer
@@ -51,11 +54,17 @@ public class StandardLib
 
 		typedef unsigned int uint; // Platform-dependent unsigned int
 
-		// Float primitives
+		// ------------------------------------
+		// FLOAT PRIMITIVES
+		// ------------------------------------
+
 		typedef float float32;
 		typedef double float64;
 
-		// Strings
+		// ------------------------------------
+		// STRING
+		// ------------------------------------
+
 		typedef char* string_view;
 
 		""");

@@ -5,7 +5,7 @@ namespace Asteroids::Game;
 public const int32 SCREEN_WIDTH = 800;
 public const int32 SCREEN_HEIGHT = 800;
 
-public fun void Run()
+public function void Run()
 {
     let int screenWidth = 800;
     let int screenHeight = 600;
@@ -37,12 +37,12 @@ public fun void Run()
     Raylib::CloseWindow();
 }
 
-public fun void Update()
+public function void Update()
 {
 
 }
 
-public fun void Render()
+public function void Render()
 {
     Raylib::ClearBackground(Raylib::Color(245, 245, 245, 255));
     Raylib::DrawText("Hello from Zen!", 190, 200, 20, Raylib::Color(140, 140, 140, 255));

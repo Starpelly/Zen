@@ -10,8 +10,26 @@ public struct Player
     public var Raylib::Vector2 position;
     public var Raylib::Vector2 size;
 
-    public fun this()
+    public function this()
     {
         this.size = Raylib::Vector2(32, 32);
     }
 }
+
+/*
+public class Player
+{
+    private var int size;
+    private var Raylib::Vector2 size;
+
+    public function void Update()
+    {
+
+    }
+
+    public function void Draw()
+    {
+
+    }
+}
+*/

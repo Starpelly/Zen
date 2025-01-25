@@ -23,6 +23,7 @@ public class Tokenizer
 		("var", .Var),
 		("let", .Let),
 		("fun", .Fun),
+		("function", .Fun),
 		("switch", .Switch),
 		("match", .Match),
 		("enum", .Enum),

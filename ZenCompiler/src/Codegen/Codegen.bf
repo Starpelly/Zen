@@ -191,7 +191,12 @@ public class Codegen
 			{
 				for (let value in @enum.Values)
 				{
-					m_outputH.AppendLine(scope $"{outName}_{value.Name.Lexeme},");
+					m_outputH.AppendLine(scope $"{outName}_{value.Name.Lexeme}");
+					if (value.Value != null)
+					{
+						m_outputH.Append(scope $" = {expressionToString(.. scope .(), value.Value)}");
+					}
+					m_outputH.Append(",");
 				}
 			}
 			m_outputH.DecreaseTab();

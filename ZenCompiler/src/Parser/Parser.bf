@@ -503,7 +503,7 @@ public class Parser
 			let valueName = consume(.Identifier, "Member name expected.");
 			var literal = default(Expr);
 
-			if (check(.Equal))
+			if (match(.Equal))
 			{
 				literal = Primary();
 			}

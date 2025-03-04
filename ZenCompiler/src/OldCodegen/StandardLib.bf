@@ -1,14 +1,16 @@
 using System;
 using System.Collections;
 
+using ZenUtils;
+
 using Zen.Builder;
 using Zen.Parser;
 
 namespace Zen.Transpiler;
 
-public class StandardLib
+public static class StandardLib
 {
-	public void WriteZenHeader(String outString)
+	public static void WriteZenHeader(String outString)
 	{
 		let builder = scope CodeBuilder();
 		defer outString.Append(builder.Code);
@@ -83,7 +85,7 @@ public class StandardLib
 		""");
 	}
 
-	public void WriteProgramFile(String outString)
+	public static void WriteProgramFile(String outString)
 	{
 		let builder = scope CodeBuilder();
 		defer outString.Append(builder.Code);
@@ -94,7 +96,7 @@ public class StandardLib
 		builder.AppendLine("#include \"All.h\"");
 	}
 
-	public void WriteAllFile(String outString, List<Node> nodes, List<CompiledFile> files)
+	public static void WriteAllFile(String outString, List<Node> nodes, List<CompiledFile> files)
 	{
 		let builder = scope CodeBuilder();
 		defer outString.Append(builder.Code);

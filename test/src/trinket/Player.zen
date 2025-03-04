@@ -1,0 +1,9 @@
+namespace Trinket;
+
+class Player
+{
+    public void Update()
+    {
+        
+    }
+}

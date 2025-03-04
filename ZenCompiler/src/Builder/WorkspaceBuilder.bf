@@ -81,7 +81,7 @@ public class WorkspaceBuilder
 	private List<String> m_writtenFiles = new .() ~ DeleteContainerAndItems!(_);
 	private int m_filesParsed = 0;
 
-	private ErrorManager m_ErrorManager = new .(CONSOLE_CODE_COLOR) ~ delete _;
+	private ErrorManager m_errorManager = new .(CONSOLE_CODE_COLOR) ~ delete _;
 	private bool m_hadErrors = false;
 	private int m_errorCount = 0;
 
@@ -148,10 +148,13 @@ public class WorkspaceBuilder
 
 		if (m_hadErrors) return;
 
-		// Compiling
+		// Type checking + resolving
 		let resolver = scope Resolver();
 		if (compileStep(resolver) case .Ok(let env))
 		{
+			// Codegen
+			const bool singleFile = true;
+
 			let outputSrcDirProgram = Path.Combine(.. scope .(), m_outCodeDir, "Program");
 			codegenStep(env, m_outCodeDir, outputSrcDirProgram);
 		}
@@ -291,10 +294,9 @@ public class WorkspaceBuilder
 		StopwatchCodegen.Start();
 		defer StopwatchCodegen.Stop();
 
-		let std = scope StandardLib();
-		let zenHeader = std.WriteZenHeader(.. scope .());
-		let programFile = std.WriteProgramFile(.. scope .());
-		let allFile = std.WriteAllFile(.. scope .(), m_nodes, m_parsedFiles);
+		let zenHeader = StandardLib.WriteZenHeader(.. scope .());
+		let programFile = StandardLib.WriteProgramFile(.. scope .());
+		let allFile = StandardLib.WriteAllFile(.. scope .(), m_nodes, m_parsedFiles);
 
 		// This is quite expensive(?)
 		// There should be a smarter way of generating files.
@@ -347,9 +349,17 @@ public class WorkspaceBuilder
 		m_writtenFiles.Add(new .(outputFileC..Replace('\\', '/')));
 	}
 
+	private void codegenStepSingleFile(ZenEnvironment resolvedEnv, StringView outputSrcDir)
+	{
+		StopwatchCodegen.Start();
+		defer StopwatchCodegen.Stop();
+
+		// let file = scope Zen.Codegen.CCodegen()
+	}
+
 	private void writeError(ICompilerError error)
 	{
-		m_ErrorManager.WriteError(m_parsedFiles[error.Token.File], error);
+		m_errorManager.WriteError(m_parsedFiles[error.Token.File], error);
 
 		++m_errorCount;
 		m_hadErrors = true;

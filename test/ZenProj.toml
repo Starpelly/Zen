@@ -1,4 +1,4 @@
 [Project]
 Name = "Sandbox"
-Source = "src/asteroids"
+Source = "src/trinket"
 StartupFunction = "Sandbox::Main"

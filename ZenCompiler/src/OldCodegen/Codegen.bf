@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 
+using ZenUtils;
+
 using Zen.Compiler;
 using Zen.Lexer;
 using Zen.Parser;

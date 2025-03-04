@@ -1,6 +1,6 @@
 using System;
 
-namespace Zen.Transpiler;
+namespace ZenUtils;
 
 public class CodeBuilder
 {

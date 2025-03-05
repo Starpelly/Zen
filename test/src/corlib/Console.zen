@@ -4,14 +4,14 @@ namespace System::Console;
 cembed("#include <stdio.h>");
 cembed("#include <windows.h>");
 
-public fun void WriteLine(let string_view text)
+public function void WriteLine(let string_view text)
 {
     cembed("""
     printf("%s\n", text);
     """);
 }
 
-public fun void TestMessageBox(let string_view text, let string_view title)
+public function void TestMessageBox(let string_view text, let string_view title)
 {
     cembed("""
     MessageBox(

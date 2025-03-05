@@ -5,7 +5,7 @@ public struct Vector2
     public var float32 x;
     public var float32 y;
 
-    public fun this(let float32 x, let float32 y)
+    public function this(let float32 x, let float32 y)
     {
         this.x = x;
         this.y = y;

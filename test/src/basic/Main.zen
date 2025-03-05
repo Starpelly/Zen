@@ -1,6 +1,6 @@
 namespace Sandbox;
 
-public fun void Main()
+public function void Main()
 {
 	let Pelly::Player player = Pelly::Player();
 }
